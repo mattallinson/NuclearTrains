@@ -21,6 +21,35 @@ stations = ["CREWSYC"] # Will be read from file, eventually
 current_date = datetime.date.today()
 url_date = current_date.strftime("%Y/%m/%d")
 
+class Location():
+
+    def __init__(self, name, wtt_arr, wtt_dep, realtime):
+        self.name = name
+        self.wtt_arr = wtt_arr
+        self.wtt_dep = wtt_dep
+        if realtime == None:
+            self.realtime = None
+        else:
+            self.real_arr = realtime[0]
+            self.real_dep = realtime[1]
+            self.delay = realtime[2]
+
+class Train():
+
+    def __init__(self, uid, date):
+        self.uid = uid
+        self.date = date
+
+    @property
+    def url(self):
+        return "/".join([URL_PREFIX, "train", self.uid, self.date, "advanced"])
+
+    def populate(self):
+        self.locations = []
+
+        r = requests.get(self.url)
+        page = BeautifulSoup(r.text, "html.parser")
+
 def get_search_url(station):
     return "/".join([URL_PREFIX, "search/advanced",
                      station, url_date, URL_TIME])
@@ -61,9 +90,10 @@ def get_trains(station):
     return trains
 
 # Test code until main() is implemented
-for station in stations:
-    print(get_search_url(station))
-    trains = get_trains(station)
-    train_url = get_train_url(trains[0]["id_url"])
-    api = make_twitter_api()
-    api.update_status("Test:" + train_url)
+if __name__ == "__main__":
+    for station in stations:
+        print(get_search_url(station))
+        trains = get_trains(station)
+        train_url = get_train_url(trains[0]["id_url"])
+        api = make_twitter_api()
+        api.update_status("Test:" + train_url)
