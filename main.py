@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 
 import datetime
+import json
 
 from bs4 import BeautifulSoup
 import requests
+import tweepy
 
 # Configuration
 # !! Never put the API key and secret here !!
-stations = ["CREWSYC"]
+AUTH_FILE = ""
 URL_PREFIX = "http://www.realtimetrains.co.uk"
 URL_TIME = "0000-2359"
 TIMETABLE_KEYS = ["ind", "plan_arr", "act_arr", "origin", "platform",
                   "id_url", "toc", "destination", "plan_dep", "act_dep"]
 
+stations = ["CREWSYC"]
 current_date = datetime.date.today()
 url_date = current_date.strftime("%Y/%m/%d")
 
@@ -24,6 +27,7 @@ def get_train_url(id_url):
 
 def get_trains(station):
     trains = []
+
     url = get_search_url(station)
     r = requests.get(url)
     page = BeautifulSoup(r.text, "html.parser")
@@ -37,7 +41,7 @@ def get_trains(station):
         # Except ID, which is a link to the train's journey. We want the link address.
         row_data[5] = row.find("a")["href"]
 
-        trains.append(dict(zip(TIMETABLE_KEYS,row_data)))
+        trains.append(dict(zip(TIMETABLE_KEYS, row_data)))
 
     return trains
 
