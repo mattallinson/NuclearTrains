@@ -70,6 +70,11 @@ class Train():
 
         self._soup = None
 
+    def __str__():
+        return "train {} on {}: {}".format(self.uid,
+                                           self.date.strftime(DATE_FORMAT),
+                                           self.url)
+
     @property
     def url(self):
         return "/".join([URL_PREFIX, "train", self.uid,
@@ -120,7 +125,7 @@ class Train():
         # is used, assuming it won't change as rtt isn't maintained
         info = schedule_info.find_all("strong")
         self.stp_code = info[0]
-        self.trailing_load = info[9
+        self.trailing_load = info[9]
 
 def _search_url(station, search_date, to_station=None,
                 from_time=None, to_time=None):
@@ -136,10 +141,10 @@ def _search_url(station, search_date, to_station=None,
     url_time = from_string + "-" + to_string
     if to_station is not None:
         return "/".join([URL_PREFIX, "search/advanced", station,
-                         "to", to_station, url_date, URL_TIME])
+                         "to", to_station, url_date, url_time])
     else:
         return "/".join([URL_PREFIX, "search/advanced",
-                         station, url_date, URL_TIME])
+                         station, url_date, url_time])
 
 def search(station, search_date, to_station=None,
            from_time=None, to_time=None):
@@ -151,6 +156,8 @@ def search(station, search_date, to_station=None,
     page = BeautifulSoup(r.text, "html.parser")
     # For one, there is only the one table on the page
     table = page.find("table")
+    if table == None:
+        return None
     # Discard the first table row, as it is the header
     rows = table.find_all("tr")[1:]
 
