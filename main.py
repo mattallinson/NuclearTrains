@@ -27,9 +27,15 @@ def make_twitter_api():
 def get_trains(stations, current_date):
     all_trains = []
     for station in stations:
+        print(station)
         trains = rtt.search(station, current_date)
         if trains is not None:
-            all_trains += trains
+            # Incredbly cludgy way of dealing with cases where train's
+            # start date is not the same as search date
+            for train in [t for t in trains
+                          if t.soup.get_text() is not "Couldn't find the schedule..."]:
+                train.populate()
+                all_trains.append(train)
         else:
             print("No trains at "+ station)
     return all_trains

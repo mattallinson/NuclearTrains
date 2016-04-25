@@ -11,6 +11,8 @@ DEFAULT_TO = "2359"
 DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
 
+NO_SCHEDULE = "Couldn't find the schedule..."
+
 class Location():
 
     def __init__(self, name, wtt_arr, wtt_dep, real_arr, real_dep, delay):
@@ -70,7 +72,7 @@ class Train():
 
         self._soup = None
 
-    def __str__():
+    def __str__(self):
         return "train {} on {}: {}".format(self.uid,
                                            self.date.strftime(DATE_FORMAT),
                                            self.url)
@@ -90,6 +92,9 @@ class Train():
             return self._soup
 
     def update_locations(self):
+        print("Getting locations of {}".format(self))
+        if self.soup.get_text() == NO_SCHEDULE:
+            raise RuntimeError("schedule not found")
         locations = []
         # First two rows of train page are headers
         rows = self.soup.find("table").find_all("tr")[2:]
@@ -114,8 +119,7 @@ class Train():
         self.update_locations()
         # Top of page shows schedule info, including if a
         # runs-as-required train is active
-        print("populate")
-        print(self.soup is not None)
+        print("Populating {}".format(self))
         schedule_info = self.soup.find("div",
                                   attrs={"class":"detailed-schedule-info"})
         # Text in schedule_info isn't tagged well
