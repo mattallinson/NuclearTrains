@@ -18,11 +18,11 @@ class Location():
     def __init__(self, name, wtt_arr, wtt_dep, real_arr, real_dep, delay):
         # Some names have a three-letter code. If so, separate this
         if "[" in name:
-            name_parts = name.split()
+            name_parts = name.strip().split()
             self.code = name_parts[-1].strip("[]")
             self.name = " ".join(name_parts[:-1])
         else:
-            self.name = name
+            self.name = name.strip()
 
         self.wtt_arr = wtt_arr
         self.wtt_dep = wtt_dep
@@ -123,13 +123,14 @@ class Train():
         schedule_info = self.soup.find("div",
                                   attrs={"class":"detailed-schedule-info"})
         # Text in schedule_info isn't tagged well
-        if "Realtime Status" in schedule_info.text:
+        if "Running" in schedule_info.text:
             self.running = True
+            print("Running!")
         # Important info is in <strong> tags. Their absolute position
         # is used, assuming it won't change as rtt isn't maintained
         info = schedule_info.find_all("strong")
         self.stp_code = info[0]
-        self.trailing_load = info[9]
+        # self.trailing_load = info[9]
 
 def _search_url(station, search_date, to_station=None,
                 from_time=None, to_time=None):

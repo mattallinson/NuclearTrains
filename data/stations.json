@@ -1,21 +1,21 @@
 {
-    "from":[
-        "BAROWRD",
-        "SETNCEG",
-        "TORNESS",
-        "HEYMCEG",
-        "HNTRDRS",
-        "BRKELEY",
-        "BRDGWUY",
-        "LYDCEGB",
-        "SIZCEGB",
-        "VALLYNE",
-        "SMINCGB",
-        "CREWSYC",
-        "KGMRDRS"],
-    "to":[
-        "CREWSYC",
-        "DRIGBNF",
-        "SELABNF",
-        "SELADRS"]
+    "from":{
+        "BAROWRD":"Barrow Ramsden Dock",
+        "SETNCEG":"Seaton-o-t British Energy",
+        "TORNESS":"Torness Power Station",
+        "HEYMCEG":"Heysham Harbour P.S.",
+        "HNTRDRS":"Hunterston Ll Drs",
+        "BRKELEY":"Berkeley C.E.G.B.",
+        "BRDGWUY":"Bridgwater F.D",
+        "LYDCEGB":"Dungeness British Energy",
+        "SIZCEGB":"Sizewell C.E.G.B.",
+        "VALLYNE":"Valley Nuclear Electric",
+        "SMINCGB":"Southminster C.E.G.B.",
+        "CREWSYC":"Crewe Coal Sidings (Drs)",
+        "KGMRDRS":"Carlisle Kingmoor Sdg(Drs)"},
+    "to":{
+        "CREWSYC":"Crewe Coal Sidings (Drs)",
+        "DRIGBNF":"Drigg Bnf",
+        "SELABNF":"Sellafield B.N.F.",
+        "SELADRS":"Sellafield (Drs)"}
 }
