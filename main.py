@@ -14,6 +14,7 @@ import realtimetrains as rtt
 # Auth data file read from command line to avoid it being in repo
 STATIONS = "data/stations.json"
 URBAN_AREAS = "data/urban.json"
+TWEET_TEMPLATES = "data/tweets.txt"
 
 def make_twitter_api():
     with open(AUTH_FILE, "r") as auth_file:
@@ -48,21 +49,36 @@ def is_nuclear(train, stations):
     return train.origin.name in stations["from"].values() and\
            train.destination.name in stations["to"].values()
 
+def nuclear_trains(stations, current_date):
+    all_trains = get_trains(stations["to"].keys(), current_date)
+    nuclear_trains = []
+    for train in all_trains:
+        if train.running and is_nuclear(train, stations)\
+                and train.uid not in [t.uid for t in nuclear_trains]:
+            nuclear_trains.append(train)
+    return nuclear_trains
+
 # Test code until main() is implemented
 if __name__ == "__main__":
     AUTH_FILE = sys.argv[1]
-    current_date = datetime.date(2016, 4, 19) # for testing purposes only
+    current_date = datetime.date.today()
+    api = make_twitter_api()
+
     with open(STATIONS, "r") as station_file:
         stations = json.load(station_file)
     with open(URBAN_AREAS, "r") as town_file:
         towns = json.load(town_file)
+    with open(TWEET_TEMPLATES, "r") as tweet_file:
+        tweet_templates = tweet_file.readlines()
+
 
     #print(rtt._search_url("CREWSYC", current_date))
-    nuclear_trains = [train for train
-                      in get_trains(stations["to"].keys(), current_date)
-                      if train.running and is_nuclear(train, stations)]
+    nuclear_trains = nuclear_trains(stations, current_date)
 
     for train in nuclear_trains:
-        print("Nuclear {}".format(train))
+        print("\n\nNuclear {}".format(train))
         print("From {} to {}".format(train.origin.name, train.destination.name))
-    api = make_twitter_api()
+        for location in train.calling_points:
+            if location.code in towns.keys():
+                print("Tweet: {} at {}".format(towns[location.code], location.dep))
+                print(tweet_templates[0].format(train.uid, towns[location.code], train.url))
