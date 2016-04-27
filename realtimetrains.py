@@ -23,6 +23,7 @@ class Location():
             self.name = " ".join(name_parts[:-1])
         else:
             self.name = name.strip()
+            self.code = None
 
         self.wtt_arr = wtt_arr
         self.wtt_dep = wtt_dep
@@ -101,13 +102,13 @@ class Train():
         for row in rows:
             cells = row.find_all("td")
             name = cells[0].text
-            wtt_arr = cells[2].text
-            wtt_dep = cells[3].text
+            wtt_arr = cells[2].text[:4]
+            wtt_dep = cells[3].text[:4]
             if len(cells) == 10: # No realtime report, thus colspan=3
                 real_arr = real_dep = delay = None
             else:
-                real_arr = cells[4].text
-                real_dep = cells[5].text
+                real_arr = cells[4].text[:4]
+                real_dep = cells[5].text[:4]
                 delay = cells[6].text
             locations.append(Location(name, wtt_arr, wtt_dep,
                                       real_arr, real_dep, delay))
