@@ -26,6 +26,30 @@ def make_twitter_api():
                           auth_data["access_secret"])
     return tweepy.API(auth)
 
+def make_tweets(train):
+    tweets = []
+    time = train.origin.dep
+    when = datetime.datetime.combine(current_date, datetime.datetime.strptime(time, "%H%M").time())
+    what = tweet_templates[1].format(uid=train.uid, origin=train.origin.name,
+        destination=train.destination.name, url=train.url)
+    tweets.append((when, what))
+
+    for location in train.calling_points:
+        if location.code in towns.keys():
+            time = location.arr if location.arr != "pass" else location.dep
+            town = towns[location.code]
+            when = datetime.datetime.combine(current_date, datetime.datetime.strptime(time, "%H%M").time())
+            what = tweet_templates[0].format(uid=train.uid, town=town, url=train.url)
+            tweets.append((when, what))
+
+    time = train.destination.arr
+    when = datetime.datetime.combine(current_date, datetime.datetime.strptime(time, "%H%M").time())
+    what = tweet_templates[2].format(uid=train.uid,
+        destination=train.destination.name, url=train.url)
+    tweets.append((when, what))
+
+    return tweets
+
 def get_trains(stations, current_date):
     all_trains = []
     for station in stations:
@@ -74,11 +98,17 @@ if __name__ == "__main__":
 
     #print(rtt._search_url("CREWSYC", current_date))
     nuclear_trains = nuclear_trains(stations, current_date)
-
     for train in nuclear_trains:
-        print("\n\nNuclear {}".format(train))
-        print("From {} to {}".format(train.origin.name, train.destination.name))
-        for location in train.calling_points:
-            if location.code in towns.keys():
-                print("Tweet: {} at {}".format(towns[location.code], location.dep))
-                print(tweet_templates[0].format(train.uid, towns[location.code], train.url))
+        tweets = make_tweets(train)
+        print(train)
+        for when, what in tweets:
+            print('{:%Y-%m-%d %H:%M} "{}"'.format(when, what))
+    # for train in nuclear_trains:
+    #     print("\n\nNuclear {}".format(train))
+    #     print("From {} to {}".format(train.origin.name, train.destination.name))
+    #     print(tweet_string(uid=train.uid, origin=train.origin.name, destination=train.destination.name, url=train.url))
+    #     for location in train.calling_points:
+    #         if location.code in towns.keys():
+    #             print("Tweet: {} at {}".format(towns[location.code], location.dep))
+    #             print(tweet_string(uid=train.uid, town=towns[location.code], url=train.url))
+    #     print(print(tweet_string(uid=train.uid, destination=train.destination.name, url=train.url)))

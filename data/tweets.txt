@@ -1,3 +1,3 @@
-☢🚂🔜🏙 Train {number} carrying nuclear waste passing {city} now {RTT link}
-🆕☢🚂 Train {number} carrying nuclear waste has departed {from} en route to {destination} {RTT link}
-☢🚂🔚 Train {number} carrying nuclear waste has arrived at {destination} {link}
+☢🚂🔜🏙 Train {uid} carrying nuclear waste passing {town} now {url}
+🆕☢🚂 Train {uid} carrying nuclear waste has departed {origin} en route to {destination} {url}
+☢🚂🔚 Train {uid} carrying nuclear waste has arrived at {destination} {url}
