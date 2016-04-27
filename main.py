@@ -4,8 +4,10 @@ import datetime
 import json
 import sys
 import difflib
+from time import sleep
 
 import tweepy
+from apscheduler.schedulers.background import BackgroundScheduler
 
 import realtimetrains as rtt
 
@@ -15,6 +17,16 @@ import realtimetrains as rtt
 STATIONS = "data/stations.json"
 URBAN_AREAS = "data/urban.json"
 TWEET_TEMPLATES = "data/tweets.txt"
+
+# Initialisation
+current_date = datetime.date.today()
+
+with open(STATIONS, "r") as station_file:
+    stations = json.load(station_file)
+with open(URBAN_AREAS, "r") as town_file:
+    towns = json.load(town_file)
+with open(TWEET_TEMPLATES, "r") as tweet_file:
+    tweet_templates = tweet_file.readlines()
 
 def make_twitter_api():
     with open(AUTH_FILE, "r") as auth_file:
@@ -84,6 +96,8 @@ def nuclear_trains(stations, current_date):
 
 # Test code until main() is implemented
 if __name__ == "__main__":
+    sched = BackgroundScheduler()
+    sched.start()
     AUTH_FILE = sys.argv[1]
     current_date = datetime.date.today()
     api = make_twitter_api()
@@ -95,14 +109,24 @@ if __name__ == "__main__":
     with open(TWEET_TEMPLATES, "r") as tweet_file:
         tweet_templates = tweet_file.readlines()
 
-
     #print(rtt._search_url("CREWSYC", current_date))
     nuclear_trains = nuclear_trains(stations, current_date)
+    jobs = []
     for train in nuclear_trains:
         tweets = make_tweets(train)
         print(train)
         for when, what in tweets:
             print('{:%Y-%m-%d %H:%M} "{}"'.format(when, what))
+            job_id = when.strftime("%H%M") + train.uid
+            job = sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
+            jobs.append(job)
+
+    sched_jobs = sched.get_jobs()
+    while len(sched_jobs) > 0:
+        sched.print_jobs()
+        sleep(300)
+        sched_jobs = sched.get_jobs()
+
     # for train in nuclear_trains:
     #     print("\n\nNuclear {}".format(train))
     #     print("From {} to {}".format(train.origin.name, train.destination.name))
