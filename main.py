@@ -14,19 +14,10 @@ import realtimetrains as rtt
 # Configuration
 # !! Never put the API key and secret here !!
 # Auth data file read from command line to avoid it being in repo
-STATIONS = "data/stations.json"
-URBAN_AREAS = "data/urban.json"
-TWEET_TEMPLATES = "data/tweets.txt"
-
-# Initialisation
-current_date = datetime.date.today()
-
-with open(STATIONS, "r") as station_file:
-    stations = json.load(station_file)
-with open(URBAN_AREAS, "r") as town_file:
-    towns = json.load(town_file)
-with open(TWEET_TEMPLATES, "r") as tweet_file:
-    tweet_templates = tweet_file.readlines()
+STATION_FILE = "data/stations.json"
+TOWN_FILE = "data/urban.json"
+TWEET_FILE = "data/tweets.txt"
+AUTH_FILE = sys.argv[1]
 
 def make_twitter_api():
     with open(AUTH_FILE, "r") as auth_file:
@@ -39,6 +30,7 @@ def make_twitter_api():
     return tweepy.API(auth)
 
 def make_tweets(train):
+    # This needs an overhaul when Locations use datetime objects
     tweets = []
     time = train.origin.dep
     when = datetime.datetime.combine(current_date, datetime.datetime.strptime(time, "%H%M").time())
@@ -65,7 +57,6 @@ def make_tweets(train):
 def get_trains(stations, current_date):
     all_trains = []
     for station in stations:
-        print(station)
         trains = rtt.search(station, current_date)
         if trains is not None:
             # Incredbly cludgy way of dealing with cases where train's
@@ -85,7 +76,7 @@ def is_nuclear(train, stations):
     return train.origin.name in stations["from"].values() and\
            train.destination.name in stations["to"].values()
 
-def nuclear_trains(stations, current_date):
+def get_nuclear_trains(stations, current_date):
     all_trains = get_trains(stations["to"].keys(), current_date)
     nuclear_trains = []
     for train in all_trains:
@@ -94,32 +85,29 @@ def nuclear_trains(stations, current_date):
             nuclear_trains.append(train)
     return nuclear_trains
 
-# Test code until main() is implemented
-if __name__ == "__main__":
-    sched = BackgroundScheduler()
-    sched.start()
-    AUTH_FILE = sys.argv[1]
-    current_date = datetime.date.today()
-    api = make_twitter_api()
+# Initialisation
+with open(STATION_FILE, "r") as station_file:
+    stations = json.load(station_file)
+with open(TOWN_FILE, "r") as town_file:
+    towns = json.load(town_file)
+with open(TWEET_FILE, "r") as tweet_file:
+    tweet_templates = tweet_file.readlines()
 
-    with open(STATIONS, "r") as station_file:
-        stations = json.load(station_file)
-    with open(URBAN_AREAS, "r") as town_file:
-        towns = json.load(town_file)
-    with open(TWEET_TEMPLATES, "r") as tweet_file:
-        tweet_templates = tweet_file.readlines()
+current_date = datetime.date.today()
+sched = BackgroundScheduler()
+sched.start()
+api = make_twitter_api()
 
-    #print(rtt._search_url("CREWSYC", current_date))
-    nuclear_trains = nuclear_trains(stations, current_date)
-    jobs = []
+def main():
+    nuclear_trains = get_nuclear_trains(stations, current_date)
     for train in nuclear_trains:
         tweets = make_tweets(train)
         print(train)
         for when, what in tweets:
             print('{:%Y-%m-%d %H:%M} "{}"'.format(when, what))
+            # Give the job an id so we can refer to it later if needs be
             job_id = when.strftime("%H%M") + train.uid
-            job = sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
-            jobs.append(job)
+            sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
 
     sched_jobs = sched.get_jobs()
     while len(sched_jobs) > 0:
@@ -127,12 +115,5 @@ if __name__ == "__main__":
         sleep(300)
         sched_jobs = sched.get_jobs()
 
-    # for train in nuclear_trains:
-    #     print("\n\nNuclear {}".format(train))
-    #     print("From {} to {}".format(train.origin.name, train.destination.name))
-    #     print(tweet_string(uid=train.uid, origin=train.origin.name, destination=train.destination.name, url=train.url))
-    #     for location in train.calling_points:
-    #         if location.code in towns.keys():
-    #             print("Tweet: {} at {}".format(towns[location.code], location.dep))
-    #             print(tweet_string(uid=train.uid, town=towns[location.code], url=train.url))
-    #     print(print(tweet_string(uid=train.uid, destination=train.destination.name, url=train.url)))
+if __name__ == '__main__':
+    main()
