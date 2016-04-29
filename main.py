@@ -33,7 +33,7 @@ def make_tweets(train):
     tweets = []
     when = train.origin.dep
     what = tweet_templates[1].format(uid=train.uid, origin=train.origin.name,
-        destination=train.destination.name, url=train.url)
+        destination=train.destination.name, time=when.strftime("%H:%M"), url=train.url)
     tweets.append((when, what))
 
     for location in train.calling_points:
