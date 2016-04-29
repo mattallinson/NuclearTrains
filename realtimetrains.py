@@ -58,6 +58,15 @@ class Location():
         departing = " departing " + self.dep if self.dep else ""
         return "{}:{}{}".format(self.name, arriving, departing)
 
+    def __repr__(self):
+        return "<{}.Location(name='{}', ...)>".format(__name__, self.name)
+
+    def remove_day(self):
+        for loc_time in [self.wtt_arr, self.wtt_dep,
+                         self.real_arr, self.real_dep]:
+            if loc_time is not None:
+                loc_time -= ONE_DAY
+
 class Train():
 
     def __init__(self, uid, date):
@@ -75,6 +84,9 @@ class Train():
         return "train {} on {}: {}".format(self.uid,
                                            self.date.strftime(DATE_FORMAT),
                                            self.url)
+
+    def __repr__(self):
+        return "<{}.Train(uid='{}', date='{:%Y-%m-%d}')>".format(__name__, self.uid, self.date)
 
     @property
     def url(self):
@@ -108,9 +120,18 @@ class Train():
                 delay = cells[6].text
             locations.append(Location(name, wtt_arr, wtt_dep,
                                       real_arr, real_dep, delay))
+
         self.origin = locations[0]
         self.destination = locations[-1]
         self.calling_points = locations[1:-1]
+        # If train runs past midnight, some locations will be on the
+        # wrong day; correct by comparing to the origin:
+        for location in self.calling_points:
+            if location.wtt_dep < self.origin.wtt_dep:
+                location.remove_day()
+        # And for destination, which doesn't have a departure time:
+        if self.destination.wtt_arr < self.origin.wtt_dep:
+            self.destination.remove_day()
 
     def populate(self):
         print("Populating {}".format(self))
