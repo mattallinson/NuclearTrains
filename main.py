@@ -14,7 +14,7 @@ import realtimetrains as rtt
 # Configuration
 # !! Never put the API key and secret here !!
 # Auth data file read from command line to avoid it being in repo
-STATION_FILE = "data/stations.json"
+ROUTES_FILE = "data/routes.json"
 TOWN_FILE = "data/urban.json"
 TWEET_FILE = "data/tweets.txt"
 AUTH_FILE = sys.argv[1]
@@ -30,34 +30,30 @@ def make_twitter_api():
     return tweepy.API(auth)
 
 def make_tweets(train):
-    # This needs an overhaul when Locations use datetime objects
     tweets = []
-    time = train.origin.dep
-    when = datetime.datetime.combine(current_date, datetime.datetime.strptime(time, "%H%M").time())
+    when = train.origin.dep
     what = tweet_templates[1].format(uid=train.uid, origin=train.origin.name,
         destination=train.destination.name, url=train.url)
     tweets.append((when, what))
 
     for location in train.calling_points:
         if location.code in towns.keys():
-            time = location.arr if location.arr != "pass" else location.dep
-            town = towns[location.code]
-            when = datetime.datetime.combine(current_date, datetime.datetime.strptime(time, "%H%M").time())
-            what = tweet_templates[0].format(uid=train.uid, town=town, url=train.url)
+            when = location.arr if location.arr != None else location.dep
+            what = tweet_templates[0].format(uid=train.uid,
+                town=towns[location.code], url=train.url)
             tweets.append((when, what))
 
-    time = train.destination.arr
-    when = datetime.datetime.combine(current_date, datetime.datetime.strptime(time, "%H%M").time())
+    when = train.destination.arr
     what = tweet_templates[2].format(uid=train.uid,
         destination=train.destination.name, url=train.url)
     tweets.append((when, what))
 
     return tweets
 
-def get_trains(stations, current_date):
+def get_trains(routes, current_date):
     all_trains = []
-    for station in stations:
-        trains = rtt.search(station, current_date)
+    for route in routes:
+        trains = rtt.search(route["from"], current_date, to_station=route["to"])
         if trains is not None:
             # Incredbly cludgy way of dealing with cases where train's
             # start date is not the same as search date
@@ -69,25 +65,12 @@ def get_trains(stations, current_date):
                 else:
                     all_trains.append(train)
         else:
-            print("No trains at "+ station)
+            print("No trains from {} to {}".format(route["from"], route["to"]))
     return all_trains
 
-def is_nuclear(train, stations):
-    return train.origin.name in stations["from"].values() and\
-           train.destination.name in stations["to"].values()
-
-def get_nuclear_trains(stations, current_date):
-    all_trains = get_trains(stations["to"].keys(), current_date)
-    nuclear_trains = []
-    for train in all_trains:
-        if train.running and is_nuclear(train, stations)\
-                and train.uid not in [t.uid for t in nuclear_trains]:
-            nuclear_trains.append(train)
-    return nuclear_trains
-
 # Initialisation
-with open(STATION_FILE, "r") as station_file:
-    stations = json.load(station_file)
+with open(ROUTES_FILE, "r") as routes_file:
+    routes = json.load(routes_file)
 with open(TOWN_FILE, "r") as town_file:
     towns = json.load(town_file)
 with open(TWEET_FILE, "r") as tweet_file:
@@ -99,7 +82,8 @@ sched.start()
 api = make_twitter_api()
 
 def main():
-    nuclear_trains = get_nuclear_trains(stations, current_date)
+    all_trains = get_trains(routes, current_date)
+    nuclear_trains = [train for train in all_trains if train.running]
     for train in nuclear_trains:
         tweets = make_tweets(train)
         print(train)
