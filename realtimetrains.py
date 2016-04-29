@@ -10,7 +10,7 @@ DEFAULT_FROM = "0000"
 DEFAULT_TO = "2359"
 DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
-
+ONE_DAY = datetime.timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
 
 class Location():
@@ -71,8 +71,6 @@ class Train():
         self.trailing_load = None
         self.running = False
 
-        self._soup = None
-
     def __str__(self):
         return "train {} on {}: {}".format(self.uid,
                                            self.date.strftime(DATE_FORMAT),
@@ -83,32 +81,30 @@ class Train():
         return "/".join([URL_PREFIX, "train", self.uid,
                          self.date.strftime(DATE_FORMAT), "advanced"])
 
-    @property
     def soup(self):
-        if self._soup is not None:
-            return self._soup
-        else:
-            r = requests.get(self.url)
-            self._soup = BeautifulSoup(r.text, "html.parser")
-            return self._soup
-
-    def update_locations(self):
-        print("Getting locations of {}".format(self))
-        if self.soup.get_text() == NO_SCHEDULE:
+        r = requests.get(self.url)
+        soup = BeautifulSoup(r.text, "html.parser")
+        if soup.text == NO_SCHEDULE:
+            self.running = False
             raise RuntimeError("schedule not found")
+            return None
+        return soup
+
+    def update_locations(self, soup):
+        print("Getting locations of {}".format(self))
         locations = []
         # First two rows of train page are headers
-        rows = self.soup.find("table").find_all("tr")[2:]
+        rows = soup.find("table").find_all("tr")[2:]
         for row in rows:
             cells = row.find_all("td")
             name = cells[0].text
-            wtt_arr = cells[2].text[:4]
-            wtt_dep = cells[3].text[:4]
-            if len(cells) == 10: # No realtime report, thus colspan=3
+            wtt_arr = _location_datetime(self.date, cells[2].text[:4])
+            wtt_dep = _location_datetime(self.date, cells[3].text[:4])
+            if len(cells) <= 10: # No realtime report
                 real_arr = real_dep = delay = None
             else:
-                real_arr = cells[4].text[:4]
-                real_dep = cells[5].text[:4]
+                real_arr = _location_datetime(self.date, cells[4].text[:4])
+                real_dep = _location_datetime(self.date, cells[5].text[:4])
                 delay = cells[6].text
             locations.append(Location(name, wtt_arr, wtt_dep,
                                       real_arr, real_dep, delay))
@@ -117,12 +113,12 @@ class Train():
         self.calling_points = locations[1:-1]
 
     def populate(self):
-        self.update_locations()
+        print("Populating {}".format(self))
+        soup = self.soup()
         # Top of page shows schedule info, including if a
         # runs-as-required train is active
-        print("Populating {}".format(self))
-        schedule_info = self.soup.find("div",
-                                  attrs={"class":"detailed-schedule-info"})
+        schedule_info = soup.find("div",
+                        attrs={"class":"detailed-schedule-info"})
         # Text in schedule_info isn't tagged well
         if "Running" in schedule_info.text:
             self.running = True
@@ -131,7 +127,17 @@ class Train():
         # is used, assuming it won't change as rtt isn't maintained
         info = schedule_info.find_all("strong")
         self.stp_code = info[0]
-        # self.trailing_load = info[9]
+
+        self.update_locations(soup)
+
+def _location_datetime(loc_date, loc_timestring):
+    """Creates a datetime object for a train calling location from
+    loc_date: a given date as a datetime object, and
+    loc_timestring: the location's 4-digit time string"""
+    if loc_timestring == "pass" or loc_timestring == "":
+        return None
+    loc_time = datetime.datetime.strptime(loc_timestring, TIME_FORMAT).time()
+    return datetime.datetime.combine(loc_date, loc_time)
 
 def _search_url(station, search_date, to_station=None,
                 from_time=None, to_time=None):
