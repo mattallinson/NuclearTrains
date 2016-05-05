@@ -155,7 +155,7 @@ def _location_datetime(loc_date, loc_timestring):
     """Creates a datetime object for a train calling location from
     loc_date: a given date as a datetime object, and
     loc_timestring: the location's 4-digit time string"""
-    if loc_timestring == "pass" or loc_timestring == "":
+    if loc_timestring in ["", "pass", "N/R"]:
         return None
     loc_time = datetime.datetime.strptime(loc_timestring, TIME_FORMAT).time()
     return datetime.datetime.combine(loc_date, loc_time)
