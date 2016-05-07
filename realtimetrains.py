@@ -10,6 +10,10 @@ DEFAULT_FROM = "0000"
 DEFAULT_TO = "2359"
 DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
+FRAC_TIMES = {
+        "¼":datetime.timedelta(seconds=15),
+        "½":datetime.timedelta(seconds=30),
+        "¾":datetime.timedelta(seconds=45)}
 ONE_DAY = datetime.timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
 
@@ -51,11 +55,8 @@ class Location():
         return self._dep
 
     def __str__(self):
-        if self.arr == None or self.arr == "pass":
-            arriving = ""
-        else:
-            arriving = " arriving " + self.arr
-        departing = " departing " + self.dep if self.dep else ""
+        arriving = " arriving " + self.arr.strftime("%H:%M:%S") if self.arr else ""
+        departing = " departing " + self.dep.strftime("%H:%M:%S") if self.dep else ""
         return "{}:{}{}".format(self.name, arriving, departing)
 
     def __repr__(self):
@@ -110,13 +111,13 @@ class Train():
         for row in rows:
             cells = row.find_all("td")
             name = cells[0].text
-            wtt_arr = _location_datetime(self.date, cells[2].text[:4])
-            wtt_dep = _location_datetime(self.date, cells[3].text[:4])
+            wtt_arr = _location_datetime(self.date, cells[2].text)
+            wtt_dep = _location_datetime(self.date, cells[3].text)
             if len(cells) <= 10: # No realtime report
                 real_arr = real_dep = delay = None
             else:
-                real_arr = _location_datetime(self.date, cells[4].text[:4])
-                real_dep = _location_datetime(self.date, cells[5].text[:4])
+                real_arr = _location_datetime(self.date, cells[4].text)
+                real_dep = _location_datetime(self.date, cells[5].text)
                 delay = cells[6].text
             locations.append(Location(name, wtt_arr, wtt_dep,
                                       real_arr, real_dep, delay))
@@ -153,12 +154,19 @@ class Train():
 
 def _location_datetime(loc_date, loc_timestring):
     """Creates a datetime object for a train calling location from
-    loc_date: a given date as a datetime object, and
-    loc_timestring: the location's 4-digit time string"""
+    loc_date: a given date as a date object, and
+    loc_timestring: the location's 4- or 5-digit time string"""
+    # Some values will not translate to a datetime object
     if loc_timestring in ["", "pass", "N/R"]:
         return None
-    loc_time = datetime.datetime.strptime(loc_timestring, TIME_FORMAT).time()
-    return datetime.datetime.combine(loc_date, loc_time)
+    # First four digits are in the simple form of HHMM
+    loc_time = datetime.datetime.strptime(loc_timestring[:4], TIME_FORMAT).time()
+    loc_datetime = datetime.datetime.combine(loc_date, loc_time)
+    # Sometimes there is a final fractional digit, whose value in
+    # seconds stored as timedeltas can be looked up
+    if len(loc_timestring) == 5:
+        loc_datetime += FRAC_TIMES[loc_timestring[4]]
+    return loc_datetime
 
 def _search_url(station, search_date, to_station=None,
                 from_time=None, to_time=None):
