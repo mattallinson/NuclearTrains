@@ -53,6 +53,7 @@ def make_tweets(train):
 def get_trains(routes, current_date):
     all_trains = []
     for route in routes:
+        print("Finding trains from {} to {}".format(route["from"], route["to"]))
         trains = rtt.search(route["from"], current_date, to_station=route["to"])
         if trains is not None:
             # Incredbly cludgy way of dealing with cases where train's
@@ -63,7 +64,8 @@ def get_trains(routes, current_date):
                 except RuntimeError:
                     print("No schedule for {}".format(train))
                 else:
-                    all_trains.append(train)
+                    if train.uid not in [t.uid for t in all_trains]:
+                        all_trains.append(train)
         else:
             print("No trains from {} to {}".format(route["from"], route["to"]))
     return all_trains
