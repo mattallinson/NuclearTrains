@@ -3,59 +3,21 @@
 import datetime
 import json
 import sys
+import difflib
+from time import sleep
 
-from bs4 import BeautifulSoup
-import requests
 import tweepy
+from apscheduler.schedulers.background import BackgroundScheduler
+
+import realtimetrains as rtt
 
 # Configuration
 # !! Never put the API key and secret here !!
 # Auth data file read from command line to avoid it being in repo
+ROUTES_FILE = "data/routes.json"
+TOWN_FILE = "data/urban.json"
+TWEET_FILE = "data/tweets.txt"
 AUTH_FILE = sys.argv[1]
-URL_PREFIX = "http://www.realtimetrains.co.uk"
-URL_TIME = "0000-2359"
-TIMETABLE_KEYS = ["ind", "plan_arr", "act_arr", "origin", "platform",
-                  "id_url", "toc", "destination", "plan_dep", "act_dep"]
-
-stations = ["CREWSYC"] # Will be read from file, eventually
-current_date = datetime.date.today()
-url_date = current_date.strftime("%Y/%m/%d")
-
-class Location():
-
-    def __init__(self, name, wtt_arr, wtt_dep, realtime):
-        self.name = name
-        self.wtt_arr = wtt_arr
-        self.wtt_dep = wtt_dep
-        if realtime == None:
-            self.realtime = None
-        else:
-            self.real_arr = realtime[0]
-            self.real_dep = realtime[1]
-            self.delay = realtime[2]
-
-class Train():
-
-    def __init__(self, uid, date):
-        self.uid = uid
-        self.date = date
-
-    @property
-    def url(self):
-        return "/".join([URL_PREFIX, "train", self.uid, self.date, "advanced"])
-
-    def populate(self):
-        self.locations = []
-
-        r = requests.get(self.url)
-        page = BeautifulSoup(r.text, "html.parser")
-
-def get_search_url(station):
-    return "/".join([URL_PREFIX, "search/advanced",
-                     station, url_date, URL_TIME])
-
-def get_train_url(id_url):
-    return URL_PREFIX + id_url
 
 def make_twitter_api():
     with open(AUTH_FILE, "r") as auth_file:
@@ -67,33 +29,77 @@ def make_twitter_api():
                           auth_data["access_secret"])
     return tweepy.API(auth)
 
-def get_trains(station):
-    trains = []
-    # This could be a one-liner but Exception handling of the request
-    # will need to be implemented at some point
-    url = get_search_url(station)
-    r = requests.get(url)
-    page = BeautifulSoup(r.text, "html.parser")
-    # For one, there is only the one table on the page
-    table = page.find("table")
-    # Discard the first table row, as it is the header
-    rows = table.find_all("tr")[1:]
+def make_tweets(train):
+    tweets = []
+    when = train.origin.dep
+    what = tweet_templates[1].format(uid=train.uid, origin=train.origin.name,
+        destination=train.destination.name, time=when.strftime("%H:%M"), url=train.url)
+    tweets.append((when, what))
 
-    for row in rows:
-        # The information we want is the text in each table cell
-        row_data = [td.text for td in row.find_all("td")]
-        # Except ID, which is a link to the train's journey. We want the link address
-        row_data[5] = row.find("a")["href"]
+    for location in train.calling_points:
+        if location.code in towns.keys():
+            when = location.arr if location.arr != None else location.dep
+            what = tweet_templates[0].format(uid=train.uid,
+                town=towns[location.code], url=train.url)
+            tweets.append((when, what))
 
-        trains.append(dict(zip(TIMETABLE_KEYS, row_data)))
+    when = train.destination.arr
+    what = tweet_templates[2].format(uid=train.uid,
+        destination=train.destination.name, url=train.url)
+    tweets.append((when, what))
 
-    return trains
+    return tweets
 
-# Test code until main() is implemented
-if __name__ == "__main__":
-    for station in stations:
-        print(get_search_url(station))
-        trains = get_trains(station)
-        train_url = get_train_url(trains[0]["id_url"])
-        api = make_twitter_api()
-        api.update_status("Test:" + train_url)
+def get_trains(routes, current_date):
+    all_trains = []
+    for route in routes:
+        print("Finding trains from {} to {}".format(route["from"], route["to"]))
+        trains = rtt.search(route["from"], current_date, to_station=route["to"])
+        if trains is not None:
+            # Incredbly cludgy way of dealing with cases where train's
+            # start date is not the same as search date
+            for train in trains:
+                try:
+                    train.populate()
+                except RuntimeError:
+                    print("No schedule for {}".format(train))
+                else:
+                    if train.uid not in [t.uid for t in all_trains]:
+                        all_trains.append(train)
+        else:
+            print("No trains from {} to {}".format(route["from"], route["to"]))
+    return all_trains
+
+# Initialisation
+with open(ROUTES_FILE, "r") as routes_file:
+    routes = json.load(routes_file)
+with open(TOWN_FILE, "r") as town_file:
+    towns = json.load(town_file)
+with open(TWEET_FILE, "r") as tweet_file:
+    tweet_templates = tweet_file.readlines()
+
+current_date = datetime.date.today()
+sched = BackgroundScheduler()
+sched.start()
+api = make_twitter_api()
+
+def main():
+    all_trains = get_trains(routes, current_date)
+    nuclear_trains = [train for train in all_trains if train.running]
+    for train in nuclear_trains:
+        tweets = make_tweets(train)
+        print(train)
+        for when, what in tweets:
+            print('{:%Y-%m-%d %H:%M} "{}"'.format(when, what))
+            # Give the job an id so we can refer to it later if needs be
+            job_id = when.strftime("%H%M") + train.uid
+            sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
+
+    sched_jobs = sched.get_jobs()
+    while len(sched_jobs) > 0:
+        sched.print_jobs()
+        sleep(300)
+        sched_jobs = sched.get_jobs()
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,3 @@
+☢🚂🔜🏙  a train carrying nuclear waste is passing {town} about now {url}
+🆕☢🚂  a nuclear waste train has departed {origin} en route to {destination} at {time} {url}
+☢🚂🔚  a train carrying nuclear waste is arriving at its destination {destination} {url}
