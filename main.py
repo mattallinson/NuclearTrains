@@ -68,20 +68,8 @@ def get_trains(routes, current_date):
             print("No trains from {} to {}".format(route["from"], route["to"]))
     return all_trains
 
-# Initialisation
-with open(ROUTES_FILE, "r") as routes_file:
-    routes = json.load(routes_file)
-with open(TOWN_FILE, "r") as town_file:
-    towns = json.load(town_file)
-with open(TWEET_FILE, "r") as tweet_file:
-    tweet_templates = tweet_file.readlines()
-
-current_date = datetime.date.today()
-sched = BackgroundScheduler()
-sched.start()
-api = make_twitter_api()
-
-def main():
+def make_jobs():
+    current_date = datetime.date.today()
     all_trains = get_trains(routes, current_date)
     nuclear_trains = [train for train in all_trains if train.running]
     for train in nuclear_trains:
@@ -93,11 +81,24 @@ def main():
             job_id = when.strftime("%H%M") + train.uid
             sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
 
-    sched_jobs = sched.get_jobs()
-    while len(sched_jobs) > 0:
+# Initialisation
+with open(ROUTES_FILE, "r") as routes_file:
+    routes = json.load(routes_file)
+with open(TOWN_FILE, "r") as town_file:
+    towns = json.load(town_file)
+with open(TWEET_FILE, "r") as tweet_file:
+    tweet_templates = tweet_file.readlines()
+
+sched = BackgroundScheduler()
+sched.start()
+api = make_twitter_api()
+
+def main():
+    sched.add_job(make_jobs, "cron", hour=0, minute=5)
+
+    while len(sched.get_jobs) > 0:
         sched.print_jobs()
         sleep(300)
-        sched_jobs = sched.get_jobs()
 
 if __name__ == '__main__':
     main()
