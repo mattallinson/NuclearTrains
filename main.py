@@ -96,7 +96,7 @@ api = make_twitter_api()
 def main():
     sched.add_job(make_jobs, "cron", hour=0, minute=5)
 
-    while len(sched.get_jobs) > 0:
+    while len(sched.get_jobs()) > 0:
         sched.print_jobs()
         sleep(300)
 
