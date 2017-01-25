@@ -71,7 +71,11 @@ def get_trains(routes, current_date):
 def make_jobs():
     current_date = datetime.date.today()
     all_trains = get_trains(routes, current_date)
-    nuclear_trains = [train for train in all_trains if train.running]
+    nuclear_trains = []
+    for train in all_trains:
+        if train.running and train not in nuclear_trains:
+            nuclear_trains.append(train)
+
     for train in nuclear_trains:
         tweets = make_tweets(train)
         print(train)
@@ -94,6 +98,7 @@ sched.start()
 api = make_twitter_api()
 
 def main():
+    make_jobs()
     sched.add_job(make_jobs, "cron", hour=0, minute=5)
 
     while len(sched.get_jobs()) > 0:

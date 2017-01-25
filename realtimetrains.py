@@ -81,6 +81,9 @@ class Train():
         self.trailing_load = None
         self.running = False
 
+    def __eq__(self, other):
+        return self.uid == other.uid and self.date == other.date
+
     def __str__(self):
         return "train {} on {}: {}".format(self.uid,
                                            self.date.strftime(DATE_FORMAT),
