@@ -3,7 +3,6 @@
 import datetime
 import json
 import sys
-import difflib
 from time import sleep
 
 import tweepy
@@ -30,22 +29,31 @@ def make_twitter_api():
     return tweepy.API(auth)
 
 def make_tweets(train):
+    origin = towns[train.origin.name]
+    dest = towns[train.destination.name]
     tweets = []
-    when = train.origin.dep
-    what = tweet_templates[1].format(uid=train.uid, origin=train.origin.name,
-        destination=train.destination.name, time=when.strftime("%H:%M"), url=train.url)
-    tweets.append((when, what))
 
     for location in train.calling_points:
         if location.code in towns.keys():
             when = location.arr if location.arr != None else location.dep
-            what = tweet_templates[0].format(uid=train.uid,
-                town=towns[location.code], url=train.url)
+            if location.code == "LPG":
+                what = tweet_templates[0].format(url=train.url)
+            else:
+                what = tweet_templates[1].format(origin=origin,
+                    destination=dest,
+                    town=towns[location.code],
+                    url=train.url)
             tweets.append((when, what))
 
+    # handle special case for origin
+    when = train.origin.dep
+    what = tweet_templates[2].format(origin=origin,
+        destination=dest, url=train.url)
+    tweets.append((when, what))
+    # handle special case for desination
     when = train.destination.arr
-    what = tweet_templates[2].format(uid=train.uid,
-        destination=train.destination.name, url=train.url)
+    what = tweet_templates[3].format(origin=origin,
+        destination=dest, url=train.url)
     tweets.append((when, what))
 
     return tweets

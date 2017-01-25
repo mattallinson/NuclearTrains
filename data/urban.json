@@ -10,7 +10,7 @@
     "LPG":"Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch",
     "RHL":"Rhyl",
     "BRI":"Bristol Temple Meads",
-    "BPW": "Bristol Parkway",
+    "BPW":"Bristol Parkway",
     "CNM":"Cheltenham",
     "STA":"Stafford",
     "XIR":"Birmingham",
@@ -49,5 +49,5 @@
     "Dungeness British Energy":"Dungeness power station",
     "Sizewell C.E.G.B.":"Sizewell power station",
     "Valley Nuclear Electric":"Valley power station",
-    "Southminster C.E.G.B.":"Bradwell power station",        
+    "Southminster C.E.G.B.":"Bradwell power station"        
 }
