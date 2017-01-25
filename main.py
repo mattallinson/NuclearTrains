@@ -85,7 +85,6 @@ def make_jobs(trains):
 
     for train in nuclear_trains:
         tweets = make_tweets(train)
-        print(train)
         for when, what in tweets:
             print('{:%Y-%m-%d %H:%M} "{}"'.format(when, what))
             # Give the job an id so we can refer to it later if needs be
@@ -109,7 +108,7 @@ def main():
     current_date = datetime.date.today()
     all_trains = get_trains(routes, current_date)
 
-    sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/30")
+    sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/30", day=current_date.day)
 
     while len(sched.get_jobs()) > 0:
         sched.print_jobs()
