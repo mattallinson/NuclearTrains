@@ -1,4 +1,4 @@
 A nuclear waste train has departed {origin} en route to {destination} {url} 🚂☢️
 A train carrying nuclear waste from {origin} to {destination} is passing {town} about now {url} 🚂☢️
-A train from Valley Power station is passing Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch about now ☢️🐉 {url}
+A train from Valley power station is passing Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch about now ☢️🐉 {url}
 The nuclear waste train from {origin} has arrived at {destination} {url} 🚂☢️
