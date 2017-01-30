@@ -11,9 +11,9 @@ DEFAULT_TO = "2359"
 DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
 FRAC_TIMES = {
-        "¼":datetime.timedelta(seconds=15),
-        "½":datetime.timedelta(seconds=30),
-        "¾":datetime.timedelta(seconds=45)}
+    "¼":datetime.timedelta(seconds=15),
+    "½":datetime.timedelta(seconds=30),
+    "¾":datetime.timedelta(seconds=45)}
 ONE_DAY = datetime.timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
 
@@ -103,7 +103,6 @@ class Train():
         if soup.text == NO_SCHEDULE:
             self.running = False
             raise RuntimeError("schedule not found")
-            return None
         return soup
 
     def update_locations(self, soup):
@@ -143,7 +142,7 @@ class Train():
         # Top of page shows schedule info, including if a
         # runs-as-required train is active
         schedule_info = soup.find("div",
-                        attrs={"class":"detailed-schedule-info"})
+                                  attrs={"class":"detailed-schedule-info"})
         # Text in schedule_info isn't tagged well
         if "Running" in schedule_info.text:
             self.running = True
@@ -195,9 +194,9 @@ def search(station, search_date, to_station=None,
     trains = []
     # This could be a one-liner but Exception handling of the request
     # will need to be implemented at some point
-    url = _search_url(station, search_date, to_station)
-    r = requests.get(url)
-    page = BeautifulSoup(r.text, "html.parser")
+    url = _search_url(station, search_date, to_station, from_time, to_time)
+    request = requests.get(url)
+    page = BeautifulSoup(request.text, "html.parser")
     # For one, there is only the one table on the page
     table = page.find("table")
     if table == None:
