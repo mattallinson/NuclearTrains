@@ -90,6 +90,7 @@ def make_jobs(trains):
             # Give the job an id so we can refer to it later if needs be
             job_id = when.strftime("%H%M") + train.uid
             if job_id not in [job.id for job in sched.get_jobs()]:
+                print("True")
                 sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
 
 # Initialisation
@@ -107,7 +108,7 @@ api = make_twitter_api()
 def main():
     current_date = datetime.date.today()
     all_trains = get_trains(routes, current_date)
-
+    make_jobs(all_trains)
     sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/30", day=current_date.day)
 
     while len(sched.get_jobs()) > 0:
