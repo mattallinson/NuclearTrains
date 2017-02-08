@@ -1,5 +1,8 @@
 .DS_Store
 *.swp
+log/
+*.log
+train.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

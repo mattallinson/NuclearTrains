@@ -76,22 +76,22 @@ def get_trains(routes, current_date):
             print("No trains from {} to {}".format(route["from"], route["to"]))
     return all_trains
 
-def make_jobs():
-    current_date = datetime.date.today()
-    all_trains = get_trains(routes, current_date)
+def make_jobs(trains):
     nuclear_trains = []
-    for train in all_trains:
+    for train in trains:
+        train.populate()
         if train.running and train not in nuclear_trains:
             nuclear_trains.append(train)
 
     for train in nuclear_trains:
         tweets = make_tweets(train)
-        print(train)
         for when, what in tweets:
             print('{:%Y-%m-%d %H:%M} "{}"'.format(when, what))
             # Give the job an id so we can refer to it later if needs be
             job_id = when.strftime("%H%M") + train.uid
-            sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
+            if job_id not in [job.id for job in sched.get_jobs()]:
+                print("True")
+                sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
 
 # Initialisation
 with open(ROUTES_FILE, "r") as routes_file:
@@ -106,11 +106,14 @@ sched.start()
 api = make_twitter_api()
 
 def main():
-    make_jobs()
-    sched.add_job(make_jobs, "cron", hour=0, minute=5)
+    current_date = datetime.date.today()
+    all_trains = get_trains(routes, current_date)
+    make_jobs(all_trains)
+    sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/30", day=current_date.day)
 
     while len(sched.get_jobs()) > 0:
         sched.print_jobs()
+        sys.stdout.flush()
         sleep(300)
 
 if __name__ == '__main__':
