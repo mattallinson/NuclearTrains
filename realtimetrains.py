@@ -107,7 +107,6 @@ class Train():
         return soup
 
     def update_locations(self, soup):
-        print("Getting locations of {}".format(self))
         locations = []
         # First two rows of train page are headers
         rows = soup.find("table").find_all("tr")[2:]
@@ -138,7 +137,7 @@ class Train():
             self.destination.remove_day()
 
     def populate(self):
-        print("Populating {}".format(self))
+        print("Getting data for {}".format(self))
         soup = self.soup()
         # Top of page shows schedule info, including if a
         # runs-as-required train is active
@@ -147,7 +146,6 @@ class Train():
         # Text in schedule_info isn't tagged well
         if "Running" in schedule_info.text:
             self.running = True
-            print("Running!")
         # Important info is in <strong> tags. Their absolute position
         # is used, assuming it won't change as rtt isn't maintained
         info = schedule_info.find_all("strong")
