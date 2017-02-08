@@ -34,7 +34,7 @@ def make_tweets(train):
     tweets = []
 
     for location in train.calling_points:
-        if location.code in towns.keys():
+        if location.code in towns.keys() or location.name in towns.keys():
             when = location.arr if location.arr != None else location.dep
             if location.code == "LPG":
                 what = tweet_templates[0].format(url=train.url)
