@@ -113,6 +113,7 @@ def main():
 
     while len(sched.get_jobs()) > 0:
         sched.print_jobs()
+        sys.stdout.flush()
         sleep(300)
 
 if __name__ == '__main__':
