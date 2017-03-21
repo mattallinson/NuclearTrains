@@ -6,10 +6,6 @@ Trains are not guaranteed to be pulling nuclear waste flasks, and even if they a
 
 **This project has no stance on nuclear energy, and its main objective is to provide a quantitative and real-time source of information about the movement of nuclear waste in the UK.**
 
-### Project goals
-1. To make a twitter bot that live-tweets when a nuclear waste carrying train is running, and a link to its route
-2. Set up the website https://nucleartrains.wordpress.com/ and the twitter account https://twitter.com/nucleartrains
- * _Done_  
+Slightly more information is available on our [website](http://nucleartrains.co.uk) and you can see the end result on our twitter [@nuclearTrains](https://twitter.com/nucleartrains)
 
-### Longterm goals
-Make a google map that shows the loaction of all nuclear waste trains in real time
+Currently the code doesn't take into account if the train is running ahead or behind schedule when it posts the tweets. This is something we're working on. 
