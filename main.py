@@ -84,6 +84,14 @@ def make_jobs(trains):
             nuclear_trains.append(train)
 
     for train in nuclear_trains:
+            #saves a copy of each realtimetrains page on the server as an archive
+            r = requests.get(train.url)
+            train_file =open('rtt_archive'+train.uid+'_archive.html', 'wb')
+
+            for chunk in r.iter_content(100000):
+                train_file.write(chunk)
+                train_file.close()
+
         tweets = make_tweets(train)
         for when, what in tweets:
             print('{:%Y-%m-%d %H:%M} "{}"'.format(when, what))
