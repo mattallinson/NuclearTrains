@@ -84,13 +84,13 @@ def make_jobs(trains):
             nuclear_trains.append(train)
 
     for train in nuclear_trains:
-            #saves a copy of each realtimetrains page on the server as an archive
-            r = requests.get(train.url)
-            train_file =open('rtt_archive'+train.uid+'_archive.html', 'wb')
+            # #saves a copy of each realtimetrains page on the server as an archive
+            # r = requests.get(train.url)
+            # train_file =open('rtt_archive'+train.uid+'_archive.html', 'wb')
 
-            for chunk in r.iter_content(100000):
-                train_file.write(chunk)
-                train_file.close()
+            # for chunk in r.iter_content(100000):
+            #     train_file.write(chunk)
+            #     train_file.close()
 
         tweets = make_tweets(train)
         for when, what in tweets:
@@ -98,7 +98,6 @@ def make_jobs(trains):
             # Give the job an id so we can refer to it later if needs be
             job_id = when.strftime("%H%M") + train.uid
             if job_id not in [job.id for job in sched.get_jobs()]:
-                print("True")
                 sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
 
 # Initialisation

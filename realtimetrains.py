@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+from hashlib import md5
 
 from bs4 import BeautifulSoup
 import requests
@@ -74,6 +75,10 @@ class Train():
         self.uid = uid
         self.date = date
 
+        self.webpage_checksum = 0
+        self.url = "/".join([URL_PREFIX, "train", self.uid,
+                    self.date.strftime(DATE_FORMAT), "advanced"])
+
         self.origin = None
         self.destination = None
         self.calling_points = None
@@ -91,19 +96,6 @@ class Train():
 
     def __repr__(self):
         return "<{}.Train(uid='{}', date='{:%Y-%m-%d}')>".format(__name__, self.uid, self.date)
-
-    @property
-    def url(self):
-        return "/".join([URL_PREFIX, "train", self.uid,
-                         self.date.strftime(DATE_FORMAT), "advanced"])
-
-    def soup(self):
-        r = requests.get(self.url)
-        soup = BeautifulSoup(r.text, "html.parser")
-        if soup.text == NO_SCHEDULE:
-            self.running = False
-            raise RuntimeError("schedule not found")
-        return soup
 
     def update_locations(self, soup):
         locations = []
@@ -136,8 +128,21 @@ class Train():
             self.destination.remove_day()
 
     def populate(self):
-        print("Getting data for {}".format(self))
-        soup = self.soup()
+        # print("Getting data for {}".format(self))
+        r = requests.get(self.url)
+
+        # if website text's hash is the same as before, do nothing
+        md5sum = md5(r.text.encode("utf-8")).digest()
+        if md5sum == self.webpage_checksum:
+            # print("{} unchanged".format(self))
+            return False
+        else:
+            self.webpage_checksum = md5sum
+
+        soup = BeautifulSoup(r.text, "html.parser")
+        if soup.text == NO_SCHEDULE:
+            self.running = False
+            raise RuntimeError("schedule not found")
         # Top of page shows schedule info, including if a
         # runs-as-required train is active
         schedule_info = soup.find("div",
@@ -151,6 +156,7 @@ class Train():
         self.stp_code = info[0]
 
         self.update_locations(soup)
+        return True
 
 def _location_datetime(loc_date, loc_timestring):
     """Creates a datetime object for a train calling location from
