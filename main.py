@@ -89,6 +89,7 @@ def make_jobs(trains):
             nuclear_trains.append(train)
 
     for train in nuclear_trains:
+        train.populate()
         tweets = make_tweets(train)
         for when, what, loc in tweets:
             # Give the job an id so we can refer to it later if needs be
@@ -117,10 +118,11 @@ def main():
     current_date = datetime.date.today()
     all_trains = get_trains(routes)
     make_jobs(all_trains)
-    sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/5", day=current_date.day)
+    sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/1", day=current_date.day)
 
     while sched.get_jobs():
-        sched.print_jobs()
+        for job in sched.get_jobs():
+            print(job.id, job.trigger)
         sys.stdout.flush()
         sleep(300)
         os.system("clear")
