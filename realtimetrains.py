@@ -176,10 +176,7 @@ def _location_datetime(loc_date, loc_timestring):
 
 def _search_url(station, search_date=None, to_station=None,
                 from_time=None, to_time=None):
-    if search_date is not None:
-        url_date = search_date.strftime(DATE_FORMAT)
-    else:
-        url_date = datetime.datetime.today.strftime(DATE_FORMAT)
+    url_date = datetime.datetime.today().strftime(DATE_FORMAT)
     if from_time is not None:
         from_string = from_time.strftime(TIME_FORMAT)
     else:
@@ -199,6 +196,8 @@ def _search_url(station, search_date=None, to_station=None,
 def search(station, search_date=None, to_station=None,
            from_time=None, to_time=None):
     trains = []
+    if search_date is None:
+        search_date = datetime.datetime.today()
     # This could be a one-liner but Exception handling of the request
     # will need to be implemented at some point
     url = _search_url(station, search_date, to_station, from_time, to_time)
