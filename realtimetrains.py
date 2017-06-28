@@ -174,9 +174,12 @@ def _location_datetime(loc_date, loc_timestring):
         loc_datetime += FRAC_TIMES[loc_timestring[4]]
     return loc_datetime
 
-def _search_url(station, search_date, to_station=None,
+def _search_url(station, search_date=None, to_station=None,
                 from_time=None, to_time=None):
-    url_date = search_date.strftime(DATE_FORMAT)
+    if search_date is not None:
+        url_date = search_date.strftime(DATE_FORMAT)
+    else:
+        url_date = datetime.datetime.today.strftime(DATE_FORMAT)
     if from_time is not None:
         from_string = from_time.strftime(TIME_FORMAT)
     else:
@@ -193,7 +196,7 @@ def _search_url(station, search_date, to_station=None,
         return "/".join([URL_PREFIX, "search/advanced",
                          station, url_date, url_time])
 
-def search(station, search_date, to_station=None,
+def search(station, search_date=None, to_station=None,
            from_time=None, to_time=None):
     trains = []
     # This could be a one-liner but Exception handling of the request
@@ -210,7 +213,7 @@ def search(station, search_date, to_station=None,
 
     for row in rows:
         id_url = row.find("a")["href"]
-        # url is in form of "/train/H61429/2016/04/23/advanced"
+        # url is in form of ".../train/H61429/2016/04/23/advanced"
         # we want the UID, the third part of this
         uid = id_url.split("/")[2]
 

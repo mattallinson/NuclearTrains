@@ -63,10 +63,10 @@ def make_tweets(train):
 
     return tweets
 
-def get_trains(routes, current_date):
+def get_trains(routes):
     all_trains = []
     for route in routes:
-        trains = rtt.search(route["from"], current_date, to_station=route["to"])
+        trains = rtt.search(route["from"], to_station=route["to"])
         if trains is not None:
             # Incredbly cludgy way of dealing with cases where train's
             # start date is not the same as search date
@@ -115,7 +115,7 @@ api = make_twitter_api()
 
 def main():
     current_date = datetime.date.today()
-    all_trains = get_trains(routes, current_date)
+    all_trains = get_trains(routes)
     make_jobs(all_trains)
     sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/5", day=current_date.day)
 
