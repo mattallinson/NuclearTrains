@@ -3,6 +3,7 @@
 import datetime
 import json
 import sys
+import os
 from time import sleep
 
 import tweepy
@@ -43,18 +44,22 @@ def make_tweets(train):
                     destination=dest,
                     town=towns[location.code],
                     url=train.url)
-            tweets.append((when, what))
+
+            loc = location.name
+            tweets.append((when, what, loc))
 
     # handle special case for origin
     when = train.origin.dep
     what = tweet_templates[2].format(origin=origin,
         destination=dest, url=train.url)
-    tweets.append((when, what))
+    loc = train.origin.name
+    tweets.append((when, what, loc))
     # handle special case for desination
     when = train.destination.arr
     what = tweet_templates[3].format(origin=origin,
         destination=dest, url=train.url)
-    tweets.append((when, what))
+    loc = train.origin.name
+    tweets.append((when, what, loc))
 
     return tweets
 
@@ -85,13 +90,16 @@ def make_jobs(trains):
 
     for train in nuclear_trains:
         tweets = make_tweets(train)
-        for when, what in tweets:
-            print('{:%Y-%m-%d %H:%M} "{}"'.format(when, what))
+        for when, what, loc in tweets:
             # Give the job an id so we can refer to it later if needs be
-            job_id = when.strftime("%H%M") + train.uid
-            if job_id not in [job.id for job in sched.get_jobs()]:
-                print("True")
-                sched.add_job(api.update_status, "date", run_date=when, args=[what], id=job_id)
+            job_id = "{}: {}".format(train.uid, loc)
+            current_jobs = sched.get_jobs()
+            current_ids = [job.id for job in current_jobs]
+            if job_id not in current_ids:
+                sched.add_job(api.update_status, trigger="date",
+                    run_date=when, args=[what], id=job_id)
+            else:
+                sched.reschedule_job(job_id, trigger="date", run_date=when)
 
 # Initialisation
 with open(ROUTES_FILE, "r") as routes_file:
@@ -109,12 +117,13 @@ def main():
     current_date = datetime.date.today()
     all_trains = get_trains(routes, current_date)
     make_jobs(all_trains)
-    sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/30", day=current_date.day)
+    sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/5", day=current_date.day)
 
-    while len(sched.get_jobs()) > 0:
+    while sched.get_jobs():
         sched.print_jobs()
         sys.stdout.flush()
         sleep(300)
+        os.system("clear")
 
 if __name__ == '__main__':
     main()

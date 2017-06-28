@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+from hashlib import md5
 
 from bs4 import BeautifulSoup
 import requests
@@ -11,9 +12,9 @@ DEFAULT_TO = "2359"
 DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
 FRAC_TIMES = {
-        "¼":datetime.timedelta(seconds=15),
-        "½":datetime.timedelta(seconds=30),
-        "¾":datetime.timedelta(seconds=45)}
+    "¼":datetime.timedelta(seconds=15),
+    "½":datetime.timedelta(seconds=30),
+    "¾":datetime.timedelta(seconds=45)}
 ONE_DAY = datetime.timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
 
@@ -74,6 +75,10 @@ class Train():
         self.uid = uid
         self.date = date
 
+        self.webpage_checksum = 0
+        self.url = "/".join([URL_PREFIX, "train", self.uid,
+                    self.date.strftime(DATE_FORMAT), "advanced"])
+
         self.origin = None
         self.destination = None
         self.calling_points = None
@@ -91,20 +96,6 @@ class Train():
 
     def __repr__(self):
         return "<{}.Train(uid='{}', date='{:%Y-%m-%d}')>".format(__name__, self.uid, self.date)
-
-    @property
-    def url(self):
-        return "/".join([URL_PREFIX, "train", self.uid,
-                         self.date.strftime(DATE_FORMAT), "advanced"])
-
-    def soup(self):
-        r = requests.get(self.url)
-        soup = BeautifulSoup(r.text, "html.parser")
-        if soup.text == NO_SCHEDULE:
-            self.running = False
-            raise RuntimeError("schedule not found")
-            return None
-        return soup
 
     def update_locations(self, soup):
         locations = []
@@ -137,12 +128,25 @@ class Train():
             self.destination.remove_day()
 
     def populate(self):
-        print("Getting data for {}".format(self))
-        soup = self.soup()
+        # print("Getting data for {}".format(self))
+        r = requests.get(self.url)
+
+        # if website text's hash is the same as before, do nothing
+        md5sum = md5(r.text.encode("utf-8")).digest()
+        if md5sum == self.webpage_checksum:
+            # print("{} unchanged".format(self))
+            return False
+        else:
+            self.webpage_checksum = md5sum
+
+        soup = BeautifulSoup(r.text, "html.parser")
+        if soup.text == NO_SCHEDULE:
+            self.running = False
+            raise RuntimeError("schedule not found")
         # Top of page shows schedule info, including if a
         # runs-as-required train is active
         schedule_info = soup.find("div",
-                        attrs={"class":"detailed-schedule-info"})
+                                  attrs={"class":"detailed-schedule-info"})
         # Text in schedule_info isn't tagged well
         if "Running" in schedule_info.text:
             self.running = True
@@ -152,6 +156,7 @@ class Train():
         self.stp_code = info[0]
 
         self.update_locations(soup)
+        return True
 
 def _location_datetime(loc_date, loc_timestring):
     """Creates a datetime object for a train calling location from
@@ -193,9 +198,9 @@ def search(station, search_date, to_station=None,
     trains = []
     # This could be a one-liner but Exception handling of the request
     # will need to be implemented at some point
-    url = _search_url(station, search_date, to_station)
-    r = requests.get(url)
-    page = BeautifulSoup(r.text, "html.parser")
+    url = _search_url(station, search_date, to_station, from_time, to_time)
+    request = requests.get(url)
+    page = BeautifulSoup(request.text, "html.parser")
     # For one, there is only the one table on the page
     table = page.find("table")
     if table == None:
