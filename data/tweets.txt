@@ -1,4 +1,4 @@
 A train from Wylfa power station is passing Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch about now ☢️🐉 {url}
-A train carrying nuclear waste is passing {town} about now {url} from {origin} to {destination}  🚂☢️
+A nuclear waste train is passing {town} about now {url} from {origin} to {destination}  🚂☢️
 A nuclear waste train has departed {origin} en route to {destination} {url} 🚂☢️
 The nuclear waste train from {origin} has arrived at {destination} {url} 🚂☢️
