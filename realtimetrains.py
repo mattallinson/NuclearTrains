@@ -12,11 +12,13 @@ DEFAULT_TO = "2359"
 DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
 FRAC_TIMES = {
-    "¼":datetime.timedelta(seconds=15),
-    "½":datetime.timedelta(seconds=30),
-    "¾":datetime.timedelta(seconds=45)}
+    "¼": datetime.timedelta(seconds=15),
+    "½": datetime.timedelta(seconds=30),
+    "¾": datetime.timedelta(seconds=45)
+}
 ONE_DAY = datetime.timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
+
 
 class Location():
 
@@ -56,8 +58,10 @@ class Location():
         return self._dep
 
     def __str__(self):
-        arriving = " arriving " + self.arr.strftime("%H:%M:%S") if self.arr else ""
-        departing = " departing " + self.dep.strftime("%H:%M:%S") if self.dep else ""
+        arriving = " arriving " + self.arr.strftime("%H:%M:%S")\
+            if self.arr else ""
+        departing = " departing " + self.dep.strftime("%H:%M:%S")\
+            if self.dep else ""
         return "{}:{}{}".format(self.name, arriving, departing)
 
     def __repr__(self):
@@ -69,6 +73,7 @@ class Location():
             if loc_time is not None:
                 loc_time -= ONE_DAY
 
+
 class Train():
 
     def __init__(self, uid, date):
@@ -77,7 +82,7 @@ class Train():
 
         self.webpage_checksum = 0
         self.url = "/".join([URL_PREFIX, "train", self.uid,
-                    self.date.strftime(DATE_FORMAT), "advanced"])
+                            self.date.strftime(DATE_FORMAT), "advanced"])
 
         self.origin = None
         self.destination = None
@@ -95,7 +100,9 @@ class Train():
                                            self.url)
 
     def __repr__(self):
-        return "<{}.Train(uid='{}', date='{:%Y-%m-%d}')>".format(__name__, self.uid, self.date)
+        return "<{}.Train(uid='{}', date='{:%Y-%m-%d}')>".format(__name__,
+                                                                 self.uid,
+                                                                 self.date)
 
     def update_locations(self, soup):
         locations = []
@@ -106,7 +113,7 @@ class Train():
             name = cells[0].text
             wtt_arr = _location_datetime(self.date, cells[2].text)
             wtt_dep = _location_datetime(self.date, cells[3].text)
-            if len(cells) <= 10: # No realtime report
+            if len(cells) <= 10:  # No realtime report
                 real_arr = real_dep = delay = None
             else:
                 real_arr = _location_datetime(self.date, cells[4].text)
@@ -146,7 +153,7 @@ class Train():
         # Top of page shows schedule info, including if a
         # runs-as-required train is active
         schedule_info = soup.find("div",
-                                  attrs={"class":"detailed-schedule-info"})
+                                  attrs={"class": "detailed-schedule-info"})
         # Text in schedule_info isn't tagged well
         if "Running" in schedule_info.text:
             self.running = True
@@ -158,6 +165,7 @@ class Train():
         self.update_locations(soup)
         return True
 
+
 def _location_datetime(loc_date, loc_timestring):
     """Creates a datetime object for a train calling location from
     loc_date: a given date as a date object, and
@@ -166,13 +174,15 @@ def _location_datetime(loc_date, loc_timestring):
     if loc_timestring in ["", "pass", "N/R"]:
         return None
     # First four digits are in the simple form of HHMM
-    loc_time = datetime.datetime.strptime(loc_timestring[:4], TIME_FORMAT).time()
+    loc_time = datetime.datetime.strptime(loc_timestring[:4],
+                                          TIME_FORMAT).time()
     loc_datetime = datetime.datetime.combine(loc_date, loc_time)
     # Sometimes there is a final fractional digit, whose value in
     # seconds stored as timedeltas can be looked up
     if len(loc_timestring) == 5:
         loc_datetime += FRAC_TIMES[loc_timestring[4]]
     return loc_datetime
+
 
 def _search_url(station, search_date=None, to_station=None,
                 from_time=None, to_time=None):
@@ -193,6 +203,7 @@ def _search_url(station, search_date=None, to_station=None,
         return "/".join([URL_PREFIX, "search/advanced",
                          station, url_date, url_time])
 
+
 def search(station, search_date=None, to_station=None,
            from_time=None, to_time=None):
     trains = []
@@ -205,7 +216,7 @@ def search(station, search_date=None, to_station=None,
     page = BeautifulSoup(request.text, "html.parser")
     # For one, there is only the one table on the page
     table = page.find("table")
-    if table == None:
+    if table is None:
         return None
     # Discard the first table row, as it is the header
     rows = table.find_all("tr")[1:]

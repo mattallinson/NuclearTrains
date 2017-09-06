@@ -19,6 +19,7 @@ TOWN_FILE = "data/urban.json"
 TWEET_FILE = "data/tweets.txt"
 AUTH_FILE = sys.argv[1]
 
+
 def make_twitter_api():
     with open(AUTH_FILE, "r") as auth_file:
         auth_data = json.load(auth_file)
@@ -29,6 +30,7 @@ def make_twitter_api():
                           auth_data["access_secret"])
     return tweepy.API(auth)
 
+
 def make_tweets(train):
     origin = towns[train.origin.name]
     dest = towns[train.destination.name]
@@ -36,14 +38,14 @@ def make_tweets(train):
 
     for location in train.calling_points:
         if location.code in towns.keys() or location.name in towns.keys():
-            when = location.arr if location.arr != None else location.dep
+            when = location.arr if location.arr is not None else location.dep
             if location.code == "LPG":
                 what = tweet_templates[0].format(url=train.url)
             else:
                 what = tweet_templates[1].format(origin=origin,
-                    destination=dest,
-                    town=towns[location.code],
-                    url=train.url)
+                                                 destination=dest,
+                                                 town=towns[location.code],
+                                                 url=train.url)
 
             loc = location.name
             tweets.append((when, what, loc))
@@ -51,17 +53,20 @@ def make_tweets(train):
     # handle special case for origin
     when = train.origin.dep
     what = tweet_templates[2].format(origin=origin,
-        destination=dest, url=train.url)
+                                     destination=dest,
+                                     url=train.url)
     loc = train.origin.name
     tweets.append((when, what, loc))
     # handle special case for desination
     when = train.destination.arr
     what = tweet_templates[3].format(origin=origin,
-        destination=dest, url=train.url)
+                                     destination=dest,
+                                     url=train.url)
     loc = train.origin.name
     tweets.append((when, what, loc))
 
     return tweets
+
 
 def get_trains(routes):
     all_trains = []
@@ -81,6 +86,7 @@ def get_trains(routes):
             print("No trains from {} to {}".format(route["from"], route["to"]))
     return all_trains
 
+
 def make_jobs(trains):
     nuclear_trains = []
     for train in trains:
@@ -98,11 +104,12 @@ def make_jobs(trains):
             current_ids = [job.id for job in current_jobs]
             if job_id not in current_ids:
                 sched.add_job(api.update_status, trigger="date",
-                    run_date=when, args=[what], id=job_id)
+                              run_date=when, args=[what], id=job_id)
             else:
                 sched.reschedule_job(job_id, trigger="date", run_date=when)
 
-# Initialisation
+
+# Initialisation globals
 with open(ROUTES_FILE, "r") as routes_file:
     routes = json.load(routes_file)
 with open(TOWN_FILE, "r") as town_file:
@@ -114,11 +121,13 @@ sched = BackgroundScheduler()
 sched.start()
 api = make_twitter_api()
 
+
 def main():
     current_date = datetime.date.today()
     all_trains = get_trains(routes)
     make_jobs(all_trains)
-    sched.add_job(make_jobs, "cron", args=[all_trains], minute="*/1", day=current_date.day)
+    sched.add_job(make_jobs, "cron", args=[all_trains],
+                  minute="*/1", day=current_date.day)
 
     while sched.get_jobs():
         for job in sched.get_jobs():
@@ -126,6 +135,7 @@ def main():
         sys.stdout.flush()
         sleep(300)
         os.system("clear")
+
 
 if __name__ == '__main__':
     main()
