@@ -2,8 +2,8 @@
 
 import datetime
 import json
+import logging
 import sys
-import os
 from time import sleep
 
 import tweepy
@@ -79,11 +79,12 @@ def get_trains(routes):
                 try:
                     train.populate()
                 except RuntimeError:
-                    print("No schedule for {}".format(train))
+                    logger.warning("No schedule for {}".format(train))
                 else:
                     all_trains.append(train)
         else:
-            print("No trains from {} to {}".format(route["from"], route["to"]))
+            logger.info(
+                "No trains from {} to {}".format(route["from"], route["to"]))
     return all_trains
 
 
@@ -110,6 +111,10 @@ def make_jobs(trains):
 
 
 # Initialisation globals
+logging.basicConfig(filename='nt.log', level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 with open(ROUTES_FILE, "r") as routes_file:
     routes = json.load(routes_file)
 with open(TOWN_FILE, "r") as town_file:
@@ -130,11 +135,14 @@ def main():
                   minute="*/1", day=current_date.day)
 
     while sched.get_jobs():
-        for job in sched.get_jobs():
-            print(job.id, job.trigger)
-        sys.stdout.flush()
-        sleep(300)
-        os.system("clear")
+        try:
+            for job in sched.get_jobs():
+                logger.info("{}, {}".format(job.id, job.trigger))
+            sleep(300)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except Exception as e:
+            logger.exception("{!r}".format(e))
 
 
 if __name__ == '__main__':
