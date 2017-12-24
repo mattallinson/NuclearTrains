@@ -186,7 +186,9 @@ def _location_datetime(loc_date, loc_timestring):
 
 def _search_url(station, search_date=None, to_station=None,
                 from_time=None, to_time=None):
-    url_date = datetime.datetime.today().strftime(DATE_FORMAT)
+    if search_date is None:
+        search_date = datetime.datetime.today()
+    url_date = search_date.strftime(DATE_FORMAT)
     if from_time is not None:
         from_string = from_time.strftime(TIME_FORMAT)
     else:
