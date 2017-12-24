@@ -3,6 +3,7 @@
 log/
 *.log
 train.sh
+auth.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
