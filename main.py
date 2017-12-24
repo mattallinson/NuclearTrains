@@ -57,12 +57,13 @@ def make_tweets(train):
                                      url=train.url)
     loc = train.origin.name
     tweets.append((when, what, loc))
+
     # handle special case for desination
     when = train.destination.arr
     what = tweet_templates[3].format(origin=origin,
                                      destination=dest,
                                      url=train.url)
-    loc = train.origin.name
+    loc = train.destination.name
     tweets.append((when, what, loc))
 
     return tweets
