@@ -2,22 +2,17 @@
 
 import datetime
 from hashlib import md5
-
-from bs4 import BeautifulSoup
 import requests
 
-URL_PREFIX = "http://www.realtimetrains.co.uk"
-DEFAULT_FROM = "0000"
-DEFAULT_TO = "2359"
+URL_PREFIX = "https://api.rtt.io/api/v1/json"
+LOCATION_SEARCH = "searchv2"
+TRAIN_SEARCH = "servicev2"
 DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
-FRAC_TIMES = {
-    "¼": datetime.timedelta(seconds=15),
-    "½": datetime.timedelta(seconds=30),
-    "¾": datetime.timedelta(seconds=45)
-}
+
 ONE_DAY = datetime.timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
+
 
 
 class Location():
@@ -76,13 +71,14 @@ class Location():
 
 class Train():
 
-    def __init__(self, uid, date):
+    def __init__(self, uid, date, api_key):
         self.uid = uid
         self.date = date
+        self.api_key = api_key
 
         self.webpage_checksum = 0
-        self.url = "/".join([URL_PREFIX, "train", self.uid,
-                            self.date.strftime(DATE_FORMAT), "advanced"])
+        self.url = "/".join([URL_PREFIX, TRAIN_SEARCH, self.uid,
+                            self.date.strftime(DATE_FORMAT)])
 
         self.origin = None
         self.destination = None
@@ -104,21 +100,41 @@ class Train():
                                                                  self.uid,
                                                                  self.date)
 
-    def update_locations(self, soup):
+    def update_locations(self, train_json):
         locations = []
         # First two rows of train page are headers
-        rows = soup.find("table").find_all("tr")[2:]
-        for row in rows:
-            cells = row.find_all("td")
-            name = cells[0].text
-            wtt_arr = _location_datetime(self.date, cells[2].text)
-            wtt_dep = _location_datetime(self.date, cells[3].text)
-            if len(cells) <= 10:  # No realtime report
-                real_arr = real_dep = delay = None
+        for place in train_json['locations']:
+            name = place['description']
+            if 'wttBookedArrival' in place.keys():
+                wtt_arr = _location_datetime(self.date, place['wttBookedArrival'])
             else:
-                real_arr = _location_datetime(self.date, cells[4].text)
-                real_dep = _location_datetime(self.date, cells[5].text)
-                delay = cells[6].text
+                wtt_arr = None
+            
+            if 'wttBookedDeparture' in place.keys():
+                wtt_dep = _location_datetime(self.date, place['wttBookedDeparture'])
+            elif 'wttBookedPass' in place.keys():
+                wtt_dep = _location_datetime(self.date, place['wttBookedPass'])
+            else: #terminus 
+                wtt_dep = None
+
+            if 'realtimeArrival' in place.keys():
+                real_arr = _location_datetime(self.date, place['realtimeArrival'])
+            else:
+                real_arr = None
+            if 'realtimeDeparture' in place.keys():
+                real_dep = _location_datetime(self.date, place["realtimeDeparture"])
+            elif "realtimePass" in place.keys():
+                real_dep = _location_datetime(self.date, place["realtimePass"])
+            else:
+                real_dep = None
+            
+            '''
+            okay delay is mad complex to deal from the API and I will add this at a later point maybe idk
+
+            '''
+            delay = None
+
+
             locations.append(Location(name, wtt_arr, wtt_dep,
                                       real_arr, real_dep, delay))
 
@@ -136,7 +152,7 @@ class Train():
 
     def populate(self):
         # print("Getting data for {}".format(self))
-        r = requests.get(self.url)
+        r = requests.get(self.url, auth = self.api_key)
 
         # if website text's hash is the same as before, do nothing
         md5sum = md5(r.text.encode("utf-8")).digest()
@@ -145,90 +161,65 @@ class Train():
             return False
         else:
             self.webpage_checksum = md5sum
-
-        soup = BeautifulSoup(r.text, "html.parser")
-        if soup.text == NO_SCHEDULE:
+        
+        if 'No schedule found' in r.text:
             self.running = False
             raise RuntimeError("schedule not found")
-        # Top of page shows schedule info, including if a
-        # runs-as-required train is active
-        schedule_info = soup.find("div",
-                                  attrs={"class": "detailed-schedule-info"})
-        # Text in schedule_info isn't tagged well
-        if "Running" in schedule_info.text:
+        else:
             self.running = True
-        # Important info is in <strong> tags. Their absolute position
-        # is used, assuming it won't change as rtt isn't maintained
-        info = schedule_info.find_all("strong")
-        self.stp_code = info[0]
 
-        self.update_locations(soup)
+        #info = schedule_info.find_all("strong")
+        #self.stp_code = info[0]
+
+        self.update_locations(r.json())
         return True
 
 
 def _location_datetime(loc_date, loc_timestring):
     """Creates a datetime object for a train calling location from
     loc_date: a given date as a date object, and
-    loc_timestring: the location's 4- or 5-digit time string"""
+    """
     # Some values will not translate to a datetime object
-    if loc_timestring in ["", "pass", "N/R"]:
-        return None
     # First four digits are in the simple form of HHMM
     loc_time = datetime.datetime.strptime(loc_timestring[:4],
                                           TIME_FORMAT).time()
     loc_datetime = datetime.datetime.combine(loc_date, loc_time)
-    # Sometimes there is a final fractional digit, whose value in
-    # seconds stored as timedeltas can be looked up
-    if len(loc_timestring) == 5:
-        loc_datetime += FRAC_TIMES[loc_timestring[4]]
+    # Sometimes the time is actual a 6 digit Hrs Mins Seconds time. This is designed to hand this.
+    if len(loc_timestring) == 6:
+        loc_datetime += datetime.timedelta(seconds= int(loc_timestring[4:]))
     return loc_datetime
 
 
-def _search_url(station, search_date=None, to_station=None,
-                from_time=None, to_time=None):
+def _search_url(station, search_date=None, to_station=None, to_time=None):
     if search_date is None:
         search_date = datetime.datetime.today()
     url_date = search_date.strftime(DATE_FORMAT)
-    if from_time is not None:
-        from_string = from_time.strftime(TIME_FORMAT)
-    else:
-        from_string = DEFAULT_FROM
-    if to_time is not None:
-        to_string = to_time.strftime(TIME_FORMAT)
-    else:
-        to_string = DEFAULT_TO
-    url_time = from_string + "-" + to_string
+    
     if to_station is not None:
-        return "/".join([URL_PREFIX, "search/advanced", station,
-                         "to", to_station, url_date, url_time])
+        search_url = "/".join([URL_PREFIX, LOCATION_SEARCH, station, "to", to_station, url_date])
     else:
-        return "/".join([URL_PREFIX, "search/advanced",
-                         station, url_date, url_time])
+        search_url = "/".join([URL_PREFIX, LOCATION_SEARCH, station, url_date])
+    
+    if to_time is not None: #adds time specific searching - I think this might be quite buggy at the RTT end and is best avoided
+        time_string = to_time.strftime(TIME_FORMAT)
+        search_url += "/"+time_string 
+
+    return search_url
 
 
-def search(station, search_date=None, to_station=None,
-           from_time=None, to_time=None):
+
+def search(api_key, station, search_date = None, to_station=None, time=None):
     trains = []
     if search_date is None:
         search_date = datetime.datetime.today()
-    # This could be a one-liner but Exception handling of the request
-    # will need to be implemented at some point
-    url = _search_url(station, search_date, to_station, from_time, to_time)
-    request = requests.get(url)
-    page = BeautifulSoup(request.text, "html.parser")
-    # For one, there is only the one table on the page
-    table = page.find("table")
-    if table is None:
-        return None
-    # Discard the first table row, as it is the header
-    rows = table.find_all("tr")[1:]
 
-    for row in rows:
-        id_url = row.find("a")["href"]
-        # url is in form of ".../train/H61429/2016/04/23/advanced"
-        # we want the UID, the third part of this
-        uid = id_url.split("/")[2]
+    url = _search_url(station, to_station = to_station, search_date = search_date,  to_time = time)
+    request = requests.get(url, auth = api_key)
 
-        trains.append(Train(uid, search_date))
+    feed = request.json()["services"]
+
+    for train_service in feed:
+        uid = train_service["serviceUid"]
+        trains.append(Train(uid, search_date, api_key))
 
     return trains

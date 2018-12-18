@@ -20,15 +20,23 @@ TWEET_FILE = "data/tweets.txt"
 AUTH_FILE = sys.argv[1]
 
 
-def make_twitter_api():
+def make_api_keys():
     with open(AUTH_FILE, "r") as auth_file:
+        
         auth_data = json.load(auth_file)
+        twitter_auth_data = auth_data["twitter"]
+        rtt_auth_data = auth_data["rtt"]
 
-    auth = tweepy.OAuthHandler(auth_data["consumer_key"],
-                               auth_data["consumer_secret"])
-    auth.set_access_token(auth_data["access_token"],
-                          auth_data["access_secret"])
-    return tweepy.API(auth)
+    
+    twitter_auth = tweepy.OAuthHandler(twitter_auth_data["consumer_key"],
+                               twitter_auth_data["consumer_secret"])
+    
+    twitter_auth.set_access_token(twitter_auth_data["access_token"],
+                          twitter_auth_data["access_secret"])
+    
+    rtt_auth = (rtt_auth_data["username"], rtt_auth_data["password"])
+
+    return {"twitter": tweepy.API(twitter_auth), "rtt": rtt_auth}
 
 
 def make_tweets(train):
@@ -72,7 +80,7 @@ def make_tweets(train):
 def get_trains(routes):
     all_trains = []
     for route in routes:
-        trains = rtt.search(route["from"], to_station=route["to"])
+        trains = rtt.search(rtt_api, route["from"], to_station=route["to"]) 
         if trains is not None:
             # Incredbly cludgy way of dealing with cases where train's
             # start date is not the same as search date
@@ -125,7 +133,9 @@ with open(TWEET_FILE, "r") as tweet_file:
 
 sched = BackgroundScheduler()
 sched.start()
-api = make_twitter_api()
+api_keys = make_api_keys()
+twitter_api = api_keys["twitter"]
+rtt_api = api_keys["rtt"]
 
 
 def main():
