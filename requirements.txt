@@ -1,7 +1,0 @@
-beautifulsoup4==4.4.1
-oauthlib==1.0.3
-requests==2.20.1
-requests-oauthlib==0.6.1
-six==1.10.0
-tweepy==3.5.0
-apscheduler==3.0.2
