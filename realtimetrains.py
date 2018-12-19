@@ -12,7 +12,6 @@ TIME_FORMAT = "%H%M"
 ONE_DAY = datetime.timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
 
-
 class Location():
 
     def __init__(self, name, tiploc, wtt_arr, wtt_dep, real_arr, real_dep, delay, crs=None):
@@ -61,7 +60,6 @@ class Location():
                          self.real_arr, self.real_dep]:
             if loc_time is not None:
                 loc_time -= ONE_DAY
-
 
 class Train():
 
@@ -174,7 +172,6 @@ class Train():
         self.update_locations(r.json())
         return True
 
-
 def _location_datetime(loc_date, loc_timestring):
     """Creates a datetime object for a train calling location from
     loc_date: a given date as a date object, and
@@ -184,11 +181,10 @@ def _location_datetime(loc_date, loc_timestring):
     loc_time = datetime.datetime.strptime(loc_timestring[:4],
                                           TIME_FORMAT).time()
     loc_datetime = datetime.datetime.combine(loc_date, loc_time)
-    # Sometimes the time is actual a 6 digit Hrs Mins Seconds time. This is designed to hand this.
+    # Sometimes the time is actual a 6 digit Hrs Mins Secs time
     if len(loc_timestring) == 6:
         loc_datetime += datetime.timedelta(seconds= int(loc_timestring[4:]))
     return loc_datetime
-
 
 def _search_url(station, search_date=None, to_station=None, to_time=None):
     if search_date is None:
@@ -200,13 +196,11 @@ def _search_url(station, search_date=None, to_station=None, to_time=None):
     else:
         search_url = "/".join([URL_PREFIX, LOCATION_SEARCH, station, url_date])
     
-    if to_time is not None: #adds time specific searching - I think this might be quite buggy at the RTT end and is best avoided
+    if to_time is not None: #adds time specific searching
         time_string = to_time.strftime(TIME_FORMAT)
         search_url += "/"+time_string 
 
     return search_url
-
-
 
 def search(api_key, station, search_date = None, to_station=None, time=None):
     trains = []
