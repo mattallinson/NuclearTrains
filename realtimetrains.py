@@ -9,24 +9,18 @@ LOCATION_SEARCH = "searchv2"
 TRAIN_SEARCH = "servicev2"
 DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
-
 ONE_DAY = datetime.timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
 
 
-
 class Location():
 
-    def __init__(self, name, wtt_arr, wtt_dep, real_arr, real_dep, delay):
-        # Some names have a three-letter code. If so, separate this
-        if "[" in name:
-            name_parts = name.strip().split()
-            self.code = name_parts[-1].strip("[]")
-            self.name = " ".join(name_parts[:-1])
-        else:
-            self.name = name.strip()
-            self.code = None
+    def __init__(self, name, tiploc, wtt_arr, wtt_dep, real_arr, real_dep, delay, crs=None):
 
+    # 3 letter code is now handled by "crs" which is a code that only exists AFAIK for extant passenger staions    
+        self.name = name.strip()
+        self.crs = crs
+        self.tiploc = tiploc 
         self.wtt_arr = wtt_arr
         self.wtt_dep = wtt_dep
         self.real_arr = real_arr
@@ -84,7 +78,7 @@ class Train():
         self.destination = None
         self.calling_points = None
         self.stp_code = None
-        self.trailing_load = None
+        self.trailing_load = None 
         self.running = False
 
     def __eq__(self, other):
@@ -102,9 +96,14 @@ class Train():
 
     def update_locations(self, train_json):
         locations = []
-        # First two rows of train page are headers
+        
         for place in train_json['locations']:
             name = place['description']
+            tiploc = place['tiploc']
+            if 'crs' in place.keys():
+                crs = place['crs']
+            else:
+                crs_code = None
             if 'wttBookedArrival' in place.keys():
                 wtt_arr = _location_datetime(self.date, place['wttBookedArrival'])
             else:
@@ -127,16 +126,17 @@ class Train():
                 real_dep = _location_datetime(self.date, place["realtimePass"])
             else:
                 real_dep = None
-            
-            '''
-            okay delay is mad complex to deal from the API and I will add this at a later point maybe idk
 
-            '''
-            delay = None
+            # Negative delay indicates train is early.
+            for keys in place.keys():
+                if 'Lateness' in key:
+                    delay = place[key]
+                else:
+                    delay = 0
 
 
-            locations.append(Location(name, wtt_arr, wtt_dep,
-                                      real_arr, real_dep, delay))
+            locations.append(Location(name, tiploc, wtt_arr, wtt_dep,
+                                      real_arr, real_dep, delay, crs))
 
         self.origin = locations[0]
         self.destination = locations[-1]
