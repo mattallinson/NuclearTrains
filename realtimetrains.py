@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import datetime
 from hashlib import md5
 import requests
@@ -101,7 +100,7 @@ class Train():
             if 'crs' in place.keys():
                 crs = place['crs']
             else:
-                crs_code = None
+                crs = None
             if 'wttBookedArrival' in place.keys():
                 wtt_arr = _location_datetime(self.date, place['wttBookedArrival'])
             else:
@@ -126,7 +125,7 @@ class Train():
                 real_dep = None
 
             # Negative delay indicates train is early.
-            for keys in place.keys():
+            for key in place.keys():
                 if 'Lateness' in key:
                     delay = place[key]
                 else:
@@ -160,9 +159,9 @@ class Train():
         else:
             self.webpage_checksum = md5sum
         
-        if 'No schedule found' in r.text:
+        if 'realtimeActivated' not in r.json().keys():
             self.running = False
-            raise RuntimeError("schedule not found")
+            #raise RuntimeError("schedule not found")
         else:
             self.running = True
 
