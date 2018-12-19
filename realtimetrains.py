@@ -75,8 +75,8 @@ class Train():
         self.origin = None
         self.destination = None
         self.calling_points = None
-        self.stp_code = None
-        self.trailing_load = None 
+        self.stp_code = None # currently nothing alters this
+        self.trailing_load = None # currently nothing alters this
         self.running = False
 
     def __eq__(self, other):
@@ -165,9 +165,6 @@ class Train():
             raise RuntimeError("schedule not found")
         else:
             self.running = True
-
-        #info = schedule_info.find_all("strong")
-        #self.stp_code = info[0]
 
         self.update_locations(r.json())
         return True
