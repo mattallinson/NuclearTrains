@@ -8,18 +8,18 @@ body{
 }
 
 h1{
-	font-family: 'Noto Sans', cursive;
+	font-family: 'Montserrat', sans-serif;
 	line-height:1.27;
 	text-align: center;
 }
 
 h2,h3{
-	font-family: 'Noto Sans', cursive;
+	font-family: 'Montserrat', sans-serif;
 	line-height:1.27;
 }
 
 p{
-	font-family: 'Noto Sans', sans-serif;
+	font-family: 'Lilita One', cursive;
 }
 
  img {
