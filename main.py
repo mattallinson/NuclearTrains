@@ -17,7 +17,7 @@ import realtimetrains as rtt
 ROUTES_FILE = "data/routes.json"
 TOWN_FILE = "data/urban.json"
 TWEET_FILE = "data/tweets.txt"
-AUTH_FILE = sys.argv[1]
+AUTH_FILE = sys.argv[2]
 
 
 def make_twitter_api():
