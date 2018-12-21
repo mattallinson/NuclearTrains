@@ -72,7 +72,7 @@ def make_tweets(train):
 def get_trains(routes):
     all_trains = []
     for route in routes:
-        trains = rtt.search(rtt_api, route["from"], to_station=route["to"]) 
+        trains = rtt.search(route["from"], to_station=route["to"])
         if trains is not None:
             # Incredbly cludgy way of dealing with cases where train's
             # start date is not the same as search date
@@ -148,3 +148,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    

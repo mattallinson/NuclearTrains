@@ -4,13 +4,13 @@ from hashlib import md5
 import requests
 import sys
 
-'''
-Creates the API key for realtime trains when imported when running a script 
-that calls RealTimeTrains, make the json authfile for http://api.rtt.io the 
-first system argument 
-
-'''
 def make_api_key(): 
+    '''
+    Creates the API key for realtime trains when imported when running a script 
+    that calls RealTimeTrains, make the json authfile for http://api.rtt.io the 
+    first system argument 
+
+    '''
     if '.json' in sys.argv[1]:
         with open(sys.argv[1], 'r') as auth_file:
             auth_data = json.load(auth_file)
@@ -240,7 +240,7 @@ def search(station, search_date = None, to_station=None, time=None):
         search_date = datetime.datetime.today()
 
     url = _search_url(station, to_station=to_station, search_date=search_date,  to_time=time)
-    request = requests.get(url, auth = rtt_api)
+    request = requests.get(url, auth=rtt_api)
     request.raise_for_status()
 
     feed = request.json()["services"]
