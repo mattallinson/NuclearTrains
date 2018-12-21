@@ -2,6 +2,29 @@
 import datetime
 from hashlib import md5
 import requests
+import sys
+
+'''
+Creates the API key for realtime trains when imported when running a script 
+that calls RealTimeTrains, make the json authfile for http://api.rtt.io the 
+first system argument 
+
+'''
+def make_api_key(): 
+    if '.json' in sys.argv[1]:
+        with open(sys.argv[1], 'r') as auth_file:
+            auth_data = json.load(auth_file)
+
+        auth = (auth_data['username'], auth_data['password'])
+
+    else: #for when playing with realtimetrains.py in the commandline/jupyter
+        username = input("Enter Username")
+        password = input("Enter Password")
+
+        auth = (username, password)
+
+    return auth
+
 
 URL_PREFIX = "https://api.rtt.io/api/v1/json"
 LOCATION_SEARCH = "searchv2"
@@ -10,6 +33,9 @@ DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
 ONE_DAY = datetime.timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
+
+rtt_api = make_api_key()
+
 
 class Location():
 
@@ -62,11 +88,14 @@ class Location():
 
 class Train():
 
-    def __init__(self, uid, date, api_key):
+    def __init__(self, uid, date = None):
         self.uid = uid
-        self.date = date
-        self.api_key = api_key
-
+        
+        if date is None:
+            self.date = datetime.datetime.today()
+        else:
+            self.date = date
+        
         self.webpage_checksum = 0
         self.url = "/".join([URL_PREFIX, TRAIN_SEARCH, self.uid,
                             self.date.strftime(DATE_FORMAT)])
@@ -101,6 +130,7 @@ class Train():
                 crs = place['crs']
             else:
                 crs = None
+
             if 'wttBookedArrival' in place.keys():
                 wtt_arr = _location_datetime(self.date, place['wttBookedArrival'])
             else:
@@ -124,10 +154,10 @@ class Train():
             else:
                 real_dep = None
 
-            # Negative delay indicates train is early.
             for key in place.keys():
-                if 'Lateness' in key:
-                    delay = place[key]
+                if 'Lateness' in key and place[key] != None:
+                    delay = place[key] # Negative delay indicates train is early.
+                    break
                 else:
                     delay = 0
 
@@ -149,7 +179,8 @@ class Train():
 
     def populate(self):
         # print("Getting data for {}".format(self))
-        r = requests.get(self.url, auth = self.api_key)
+        r = requests.get(self.url, auth=rtt_api)
+        r.raise_for_status() 
 
         # if website text's hash is the same as before, do nothing
         md5sum = md5(r.text.encode("utf-8")).digest()
@@ -159,11 +190,16 @@ class Train():
         else:
             self.webpage_checksum = md5sum
         
-        if 'realtimeActivated' not in r.json().keys():
+        if 'realtimeActivated' not in r.json():
             self.running = False
-            #raise RuntimeError("schedule not found")
         else:
             self.running = True
+
+        for loc in r.json()['locations']:
+            if 'CANCELLED_CALL' or 'CANCELLED_PASS' in loc.values():
+                self.cancelled = True
+            else:
+                self.cancelled = False
 
         self.update_locations(r.json())
         return True
@@ -177,7 +213,7 @@ def _location_datetime(loc_date, loc_timestring):
     loc_time = datetime.datetime.strptime(loc_timestring[:4],
                                           TIME_FORMAT).time()
     loc_datetime = datetime.datetime.combine(loc_date, loc_time)
-    # Sometimes the time is actual a 6 digit Hrs Mins Secs time
+    # Sometimes the time is actually a 6 digit Hrs Mins Secs time
     if len(loc_timestring) == 6:
         loc_datetime += datetime.timedelta(seconds= int(loc_timestring[4:]))
     return loc_datetime
@@ -194,22 +230,23 @@ def _search_url(station, search_date=None, to_station=None, to_time=None):
     
     if to_time is not None: #adds time specific searching
         time_string = to_time.strftime(TIME_FORMAT)
-        search_url += "/"+time_string 
+        search_url += "/" + time_string 
 
     return search_url
 
-def search(api_key, station, search_date = None, to_station=None, time=None):
+def search(station, search_date = None, to_station=None, time=None):
     trains = []
     if search_date is None:
         search_date = datetime.datetime.today()
 
-    url = _search_url(station, to_station = to_station, search_date = search_date,  to_time = time)
-    request = requests.get(url, auth = api_key)
+    url = _search_url(station, to_station=to_station, search_date=search_date,  to_time=time)
+    request = requests.get(url, auth = rtt_api)
+    request.raise_for_status()
 
     feed = request.json()["services"]
 
     for train_service in feed:
         uid = train_service["serviceUid"]
-        trains.append(Train(uid, search_date, api_key))
+        trains.append(Train(uid, search_date))
 
     return trains
