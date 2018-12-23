@@ -2,28 +2,64 @@ body{
 	margin:20px auto;
 	max-width:850px;
 	line-height:1.6;
-	font-size:18px;
 	color:#444;
-	padding:0 10px
+	padding:10px 10px
+}
+
+nav {
+	text-align: center;
+	font-family: 'Raleway', sans-serif;
+	font-size:18px;
 }
 
 h1{
-	font-family: 'Lilita One', sans-serif;
-	line-height:1.27;
+	font-family: 'Raleway', sans-serif;
+	line-height:0;
 	text-align: center;
+	font-size: 95px;
+	font-weight: 100;
 }
 
 h2,h3{
-	font-family: 'Lilita One', sans-serif;
+	font-family: 'Raleway', sans-serif;
 	line-height:1.27;
 }
 
 p{
-	font-family: 'Montserrat', sans-serif;
+	font-size:18px;
+	font-family: 'Lato', sans-serif;
 	
+}
+
+p.center{
+	text-align: center;
+}
+
+p.copyright{
+	 text-align: right;
+	 font-size:10px;
 }
 
  img {
     max-width: 100%;
     height: auto;
+}
+.faq{
+	color: black;
+	font-weight: 900;
+}
+
+a:hover{
+	background-color: green;
+    color: white;
+}
+
+::-moz-selection { /* Code for Firefox */
+  color: yellow;
+  background: green;
+}
+
+::selection {
+  color: yellow;
+  background: green;
 }
