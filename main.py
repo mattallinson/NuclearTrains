@@ -7,6 +7,7 @@ import sys
 from time import sleep
 
 import tweepy
+from mastodon import Mastodon
 from apscheduler.schedulers.background import BackgroundScheduler
 
 import realtimetrains as rtt
@@ -37,11 +38,16 @@ sched.start()
 
 
 def make_twitter_api():
-    auth = tweepy.OAuthHandler(auth_data["consumer_key"],
-                               auth_data["consumer_secret"])
-    auth.set_access_token(auth_data["access_token"],
-                          auth_data["access_secret"])
+    auth = tweepy.OAuthHandler(auth_data["twitter_consumer_key"],
+                               auth_data["twitter_consumer_secret"])
+    auth.set_access_token(auth_data["twitter_access_token"],
+                          auth_data["twitter_access_secret"])
     return tweepy.API(auth)
+
+
+def make_mastodon_api():
+    return Mastodon(api_base_url="https://botsin.space",
+                    access_token=auth_data["mastodon_access_token"])
 
 
 def make_tweets(train):
@@ -118,13 +124,14 @@ def make_jobs(trains):
             current_jobs = sched.get_jobs()
             current_ids = [job.id for job in current_jobs]
             if job_id not in current_ids:
-                sched.add_job(api.update_status, trigger="date",
+                sched.add_job(twitter_api.update_status, trigger="date",
                               run_date=when, args=[what], id=job_id)
             else:
                 sched.reschedule_job(job_id, trigger="date", run_date=when)
 
 
-api = make_twitter_api()
+twitter_api = make_twitter_api()
+mastodon_api = make_mastodon_api()
 
 
 def main():
