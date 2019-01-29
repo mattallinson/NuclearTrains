@@ -119,13 +119,15 @@ def make_jobs(trains):
         train.populate()
         tweets = make_tweets(train)
         for when, what, loc in tweets:
-            # Give the job an id so we can refer to it later if needs be
+            # Give the jobs an id so we can refer to them later if needs be
             job_id = "{}: {}".format(train.uid, loc)
             current_jobs = sched.get_jobs()
             current_ids = [job.id for job in current_jobs]
             if job_id not in current_ids:
                 sched.add_job(twitter_api.update_status, trigger="date",
-                              run_date=when, args=[what], id=job_id)
+                              run_date=when, args=[what], id="tweet " + job_id)
+                sched.add_job(mastodon_api.toot, trigger="date",
+                              run_date=when, args=[what], id="toot " + job_id)
             else:
                 sched.reschedule_job(job_id, trigger="date", run_date=when)
 
