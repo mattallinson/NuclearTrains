@@ -11,6 +11,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 import realtimetrains as rtt
 
+logging.basicConfig(filename='nt.log', level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 # Configuration
 # !! Never put the API key and secret here !!
 # Auth data file read from command line to avoid it being in repo
@@ -19,11 +23,20 @@ TOWN_FILE = "data/urban.json"
 TWEET_FILE = "data/tweets.txt"
 AUTH_FILE = sys.argv[2]
 
-
-def make_twitter_api():
-    with open(AUTH_FILE, "r") as auth_file:
+with open(ROUTES_FILE, "r") as routes_file:
+    routes = json.load(routes_file)
+with open(TOWN_FILE, "r") as town_file:
+    towns = json.load(town_file)
+with open(TWEET_FILE, "r") as tweet_file:
+    tweet_templates = tweet_file.readlines()
+with open(AUTH_FILE, "r") as auth_file:
         auth_data = json.load(auth_file)
 
+sched = BackgroundScheduler()
+sched.start()
+
+
+def make_twitter_api():
     auth = tweepy.OAuthHandler(auth_data["consumer_key"],
                                auth_data["consumer_secret"])
     auth.set_access_token(auth_data["access_token"],
@@ -111,20 +124,6 @@ def make_jobs(trains):
                 sched.reschedule_job(job_id, trigger="date", run_date=when)
 
 
-# Initialisation globals
-logging.basicConfig(filename='nt.log', level=logging.INFO)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-with open(ROUTES_FILE, "r") as routes_file:
-    routes = json.load(routes_file)
-with open(TOWN_FILE, "r") as town_file:
-    towns = json.load(town_file)
-with open(TWEET_FILE, "r") as tweet_file:
-    tweet_templates = tweet_file.readlines()
-
-sched = BackgroundScheduler()
-sched.start()
 api = make_twitter_api()
 
 
@@ -148,4 +147,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
