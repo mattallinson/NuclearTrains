@@ -12,11 +12,11 @@ def make_api_key():
     first system argument
 
     '''
-    if '.json' in sys.argv[1]:
-        with open(sys.argv[1], 'r') as auth_file:
+    if ".json" in sys.argv[1]:
+        with open(sys.argv[1], "r") as auth_file:
             auth_data = json.load(auth_file)
 
-        auth = (auth_data['username'], auth_data['password'])
+        auth = (auth_data["rtt"]["username"], auth_data["rtt"]["password"])
 
     else: #for when playing with realtimetrains.py in the commandline/jupyter
         username = input("Enter Username")
@@ -249,8 +249,9 @@ def search(station, search_date=None, to_station=None, time=None):
 
     feed = request.json()["services"]
 
-    for train_service in feed:
-        uid = train_service["serviceUid"]
-        trains.append(Train(uid, search_date))
+    if feed:
+        for train_service in feed:
+            uid = train_service["serviceUid"]
+            trains.append(Train(uid, search_date))
 
     return trains

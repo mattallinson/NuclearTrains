@@ -22,7 +22,7 @@ logger.setLevel(logging.INFO)
 ROUTES_FILE = "data/routes.json"
 TOWN_FILE = "data/urban.json"
 TWEET_FILE = "data/tweets.txt"
-AUTH_FILE = sys.argv[2]
+AUTH_FILE = sys.argv[1]
 
 with open(ROUTES_FILE, "r") as routes_file:
     routes = json.load(routes_file)
@@ -38,16 +38,16 @@ sched.start()
 
 
 def make_twitter_api():
-    auth = tweepy.OAuthHandler(auth_data["twitter_consumer_key"],
-                               auth_data["twitter_consumer_secret"])
-    auth.set_access_token(auth_data["twitter_access_token"],
-                          auth_data["twitter_access_secret"])
+    auth = tweepy.OAuthHandler(auth_data["twitter"]["consumer_key"],
+                               auth_data["twitter"]["consumer_secret"])
+    auth.set_access_token(auth_data["twitter"]["access_token"],
+                          auth_data["twitter"]["access_secret"])
     return tweepy.API(auth)
 
 
 def make_mastodon_api():
     return Mastodon(api_base_url="https://botsin.space",
-                    access_token=auth_data["mastodon_access_token"])
+                    access_token=auth_data["mastodon"]["access_token"])
 
 
 def make_tweets(train):
@@ -56,14 +56,14 @@ def make_tweets(train):
     tweets = []
 
     for location in train.calling_points:
-        if location.code in towns.keys() or location.name in towns.keys():
+        if location.crs in towns.keys() or location.name in towns.keys():
             when = location.arr if location.arr is not None else location.dep
-            if location.code == "LPG":
+            if location.crs == "LPG":
                 what = tweet_templates[0].format(url=train.url)
             else:
                 what = tweet_templates[1].format(origin=origin,
                                                  destination=dest,
-                                                 town=towns[location.code],
+                                                 town=towns[location.crs],
                                                  url=train.url)
 
             loc = location.name
@@ -92,7 +92,7 @@ def get_trains(routes):
     all_trains = []
     for route in routes:
         trains = rtt.search(route["from"], to_station=route["to"])
-        if trains is not None:
+        if trains:
             # Incredbly cludgy way of dealing with cases where train's
             # start date is not the same as search date
             for train in trains:
