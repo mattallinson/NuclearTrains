@@ -7,73 +7,92 @@ import sys
 from time import sleep
 
 import tweepy
+from mastodon import Mastodon
 from apscheduler.schedulers.background import BackgroundScheduler
 
 import realtimetrains as rtt
+
+logging.basicConfig(filename='nt.log', level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 # Configuration
 # !! Never put the API key and secret here !!
 # Auth data file read from command line to avoid it being in repo
 ROUTES_FILE = "data/routes.json"
 TOWN_FILE = "data/urban.json"
-TWEET_FILE = "data/tweets.txt"
-AUTH_FILE = sys.argv[2]
+TWEET_FILE = "data/messages.txt"
+AUTH_FILE = sys.argv[1]
+
+with open(ROUTES_FILE, "r") as routes_file:
+    routes = json.load(routes_file)
+with open(TOWN_FILE, "r") as town_file:
+    towns = json.load(town_file)
+with open(TWEET_FILE, "r") as tweet_file:
+    tweet_templates = tweet_file.readlines()
+with open(AUTH_FILE, "r") as auth_file:
+        auth_data = json.load(auth_file)
+
+sched = BackgroundScheduler()
+sched.start()
 
 
 def make_twitter_api():
-    with open(AUTH_FILE, "r") as auth_file:
-        auth_data = json.load(auth_file)
-
-    auth = tweepy.OAuthHandler(auth_data["consumer_key"],
-                               auth_data["consumer_secret"])
-    auth.set_access_token(auth_data["access_token"],
-                          auth_data["access_secret"])
+    auth = tweepy.OAuthHandler(auth_data["twitter"]["consumer_key"],
+                               auth_data["twitter"]["consumer_secret"])
+    auth.set_access_token(auth_data["twitter"]["access_token"],
+                          auth_data["twitter"]["access_secret"])
     return tweepy.API(auth)
 
 
-def make_tweets(train):
+def make_mastodon_api():
+    return Mastodon(api_base_url="https://botsin.space",
+                    access_token=auth_data["mastodon"]["access_token"])
+
+
+def make_messages(train):
     origin = towns[train.origin.name]
     dest = towns[train.destination.name]
-    tweets = []
+    messages = []
 
     for location in train.calling_points:
-        if location.code in towns.keys() or location.name in towns.keys():
+        if location.crs in towns.keys() or location.name in towns.keys():
             when = location.arr if location.arr is not None else location.dep
-            if location.code == "LPG":
-                what = tweet_templates[0].format(url=train.url)
+            if location.crs == "LPG":
+                what = tweet_templates[0].format(url=train.web_url)
             else:
                 what = tweet_templates[1].format(origin=origin,
                                                  destination=dest,
-                                                 town=towns[location.code],
-                                                 url=train.url)
+                                                 town=towns[location.crs],
+                                                 url=train.web_url)
 
             loc = location.name
-            tweets.append((when, what, loc))
+            messages.append((when, what, loc))
 
     # handle special case for origin
     when = train.origin.dep
     what = tweet_templates[2].format(origin=origin,
                                      destination=dest,
-                                     url=train.url)
+                                     url=train.web_url)
     loc = train.origin.name
-    tweets.append((when, what, loc))
+    messages.append((when, what, loc))
 
     # handle special case for desination
     when = train.destination.arr
     what = tweet_templates[3].format(origin=origin,
                                      destination=dest,
-                                     url=train.url)
+                                     url=train.web_url)
     loc = train.destination.name
-    tweets.append((when, what, loc))
+    messages.append((when, what, loc))
 
-    return tweets
+    return messages
 
 
 def get_trains(routes):
     all_trains = []
     for route in routes:
         trains = rtt.search(route["from"], to_station=route["to"])
-        if trains is not None:
+        if trains:
             # Incredbly cludgy way of dealing with cases where train's
             # start date is not the same as search date
             for train in trains:
@@ -98,34 +117,28 @@ def make_jobs(trains):
 
     for train in nuclear_trains:
         train.populate()
-        tweets = make_tweets(train)
-        for when, what, loc in tweets:
-            # Give the job an id so we can refer to it later if needs be
-            job_id = "{}: {}".format(train.uid, loc)
-            current_jobs = sched.get_jobs()
-            current_ids = [job.id for job in current_jobs]
-            if job_id not in current_ids:
-                sched.add_job(api.update_status, trigger="date",
-                              run_date=when, args=[what], id=job_id)
+        messages = make_messages(train)
+        for when, what, loc in messages:
+            # Give the jobs an id so we can refer to them later if needs be
+            tweet_job_id = "tweet {}: {}".format(train.uid, loc)
+            toot_job_id = "toot {}: {}".format(train.uid, loc)
+            current_job_ids = [job.id for job in sched.get_jobs()]
+
+            if tweet_job_id not in current_job_ids:
+                sched.add_job(twitter_api.update_status, trigger="date",
+                              run_date=when, args=[what], id=tweet_job_id)
             else:
-                sched.reschedule_job(job_id, trigger="date", run_date=when)
+                sched.reschedule_job(tweet_job_id, trigger="date", run_date=when)
+
+            if toot_job_id not in current_job_ids:
+                sched.add_job(mastodon_api.toot, trigger="date",
+                              run_date=when, args=[what], id=toot_job_id)
+            else:
+                sched.reschedule_job(toot_job_id, trigger="date", run_date=when)
 
 
-# Initialisation globals
-logging.basicConfig(filename='nt.log', level=logging.INFO)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-with open(ROUTES_FILE, "r") as routes_file:
-    routes = json.load(routes_file)
-with open(TOWN_FILE, "r") as town_file:
-    towns = json.load(town_file)
-with open(TWEET_FILE, "r") as tweet_file:
-    tweet_templates = tweet_file.readlines()
-
-sched = BackgroundScheduler()
-sched.start()
-api = make_twitter_api()
+twitter_api = make_twitter_api()
+mastodon_api = make_mastodon_api()
 
 
 def main():
@@ -148,4 +161,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    

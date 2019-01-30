@@ -1,21 +1,22 @@
-#!/usr/bin/env python3
 import datetime
 from hashlib import md5
+import json
 import requests
 import sys
 
-def make_api_key(): 
+
+def make_api_key():
     '''
-    Creates the API key for realtime trains when imported when running a script 
-    that calls RealTimeTrains, make the json authfile for http://api.rtt.io the 
-    first system argument 
+    Creates the API key for realtime trains when imported when running a script
+    that calls RealTimeTrains, make the json authfile for http://api.rtt.io the
+    first system argument
 
     '''
-    if '.json' in sys.argv[1]:
-        with open(sys.argv[1], 'r') as auth_file:
+    if ".json" in sys.argv[1]:
+        with open(sys.argv[1], "r") as auth_file:
             auth_data = json.load(auth_file)
 
-        auth = (auth_data['username'], auth_data['password'])
+        auth = (auth_data["rtt"]["username"], auth_data["rtt"]["password"])
 
     else: #for when playing with realtimetrains.py in the commandline/jupyter
         username = input("Enter Username")
@@ -27,6 +28,7 @@ def make_api_key():
 
 
 URL_PREFIX = "https://api.rtt.io/api/v1/json"
+WEBSITE_URL = "http://www.realtimetrains.co.uk/train"
 LOCATION_SEARCH = "searchv2"
 TRAIN_SEARCH = "servicev2"
 DATE_FORMAT = "%Y/%m/%d"
@@ -41,10 +43,10 @@ class Location():
 
     def __init__(self, name, tiploc, wtt_arr, wtt_dep, real_arr, real_dep, delay, crs=None):
 
-    # 3 letter code is now handled by "crs" which is a code that only exists AFAIK for extant passenger staions    
+        # 3 letter code is now handled by "crs" which is a code that only exists AFAIK for extant passenger staions
         self.name = name.strip()
         self.crs = crs
-        self.tiploc = tiploc 
+        self.tiploc = tiploc
         self.wtt_arr = wtt_arr
         self.wtt_dep = wtt_dep
         self.real_arr = real_arr
@@ -86,19 +88,23 @@ class Location():
             if loc_time is not None:
                 loc_time -= ONE_DAY
 
+
 class Train():
 
-    def __init__(self, uid, date = None):
+    def __init__(self, uid, date=None):
         self.uid = uid
-        
+
         if date is None:
             self.date = datetime.datetime.today()
         else:
             self.date = date
-        
+
         self.webpage_checksum = 0
         self.url = "/".join([URL_PREFIX, TRAIN_SEARCH, self.uid,
                             self.date.strftime(DATE_FORMAT)])
+        self.web_url = "/".join([WEBSITE_URL, self.uid,
+                                self.date.strftime(DATE_FORMAT),
+                                "advanced"])
 
         self.origin = None
         self.destination = None
@@ -122,7 +128,7 @@ class Train():
 
     def update_locations(self, train_json):
         locations = []
-        
+
         for place in train_json['locations']:
             name = place['description']
             tiploc = place['tiploc']
@@ -135,12 +141,12 @@ class Train():
                 wtt_arr = _location_datetime(self.date, place['wttBookedArrival'])
             else:
                 wtt_arr = None
-            
+
             if 'wttBookedDeparture' in place.keys():
                 wtt_dep = _location_datetime(self.date, place['wttBookedDeparture'])
             elif 'wttBookedPass' in place.keys():
                 wtt_dep = _location_datetime(self.date, place['wttBookedPass'])
-            else: #terminus 
+            else: #terminus
                 wtt_dep = None
 
             if 'realtimeArrival' in place.keys():
@@ -154,13 +160,12 @@ class Train():
             else:
                 real_dep = None
 
-            for key in place.keys():
-                if 'Lateness' in key and place[key] != None:
+            for key in place:
+                if 'Lateness' in key and place[key] is not None:
                     delay = place[key] # Negative delay indicates train is early.
                     break
                 else:
                     delay = 0
-
 
             locations.append(Location(name, tiploc, wtt_arr, wtt_dep,
                                       real_arr, real_dep, delay, crs))
@@ -180,7 +185,7 @@ class Train():
     def populate(self):
         # print("Getting data for {}".format(self))
         r = requests.get(self.url, auth=rtt_api)
-        r.raise_for_status() 
+        r.raise_for_status()
 
         # if website text's hash is the same as before, do nothing
         md5sum = md5(r.text.encode("utf-8")).digest()
@@ -189,7 +194,7 @@ class Train():
             return False
         else:
             self.webpage_checksum = md5sum
-        
+
         if 'realtimeActivated' not in r.json():
             self.running = False
         else:
@@ -204,6 +209,7 @@ class Train():
         self.update_locations(r.json())
         return True
 
+
 def _location_datetime(loc_date, loc_timestring):
     """Creates a datetime object for a train calling location from
     loc_date: a given date as a date object, and
@@ -215,38 +221,41 @@ def _location_datetime(loc_date, loc_timestring):
     loc_datetime = datetime.datetime.combine(loc_date, loc_time)
     # Sometimes the time is actually a 6 digit Hrs Mins Secs time
     if len(loc_timestring) == 6:
-        loc_datetime += datetime.timedelta(seconds= int(loc_timestring[4:]))
+        loc_datetime += datetime.timedelta(seconds=int(loc_timestring[4:]))
     return loc_datetime
+
 
 def _search_url(station, search_date=None, to_station=None, to_time=None):
     if search_date is None:
         search_date = datetime.datetime.today()
     url_date = search_date.strftime(DATE_FORMAT)
-    
+
     if to_station is not None:
         search_url = "/".join([URL_PREFIX, LOCATION_SEARCH, station, "to", to_station, url_date])
     else:
         search_url = "/".join([URL_PREFIX, LOCATION_SEARCH, station, url_date])
-    
+
     if to_time is not None: #adds time specific searching
         time_string = to_time.strftime(TIME_FORMAT)
-        search_url += "/" + time_string 
+        search_url += "/" + time_string
 
     return search_url
 
-def search(station, search_date = None, to_station=None, time=None):
+
+def search(station, search_date=None, to_station=None, time=None):
     trains = []
     if search_date is None:
         search_date = datetime.datetime.today()
 
-    url = _search_url(station, to_station=to_station, search_date=search_date,  to_time=time)
+    url = _search_url(station, to_station=to_station, search_date=search_date, to_time=time)
     request = requests.get(url, auth=rtt_api)
     request.raise_for_status()
 
     feed = request.json()["services"]
 
-    for train_service in feed:
-        uid = train_service["serviceUid"]
-        trains.append(Train(uid, search_date))
+    if feed:
+        for train_service in feed:
+            uid = train_service["serviceUid"]
+            trains.append(Train(uid, search_date))
 
     return trains
