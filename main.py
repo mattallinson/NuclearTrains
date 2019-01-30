@@ -21,7 +21,7 @@ logger.setLevel(logging.INFO)
 # Auth data file read from command line to avoid it being in repo
 ROUTES_FILE = "data/routes.json"
 TOWN_FILE = "data/urban.json"
-TWEET_FILE = "data/tweets.txt"
+TWEET_FILE = "data/messages.txt"
 AUTH_FILE = sys.argv[1]
 
 with open(ROUTES_FILE, "r") as routes_file:
@@ -50,10 +50,10 @@ def make_mastodon_api():
                     access_token=auth_data["mastodon"]["access_token"])
 
 
-def make_tweets(train):
+def make_messages(train):
     origin = towns[train.origin.name]
     dest = towns[train.destination.name]
-    tweets = []
+    messages = []
 
     for location in train.calling_points:
         if location.crs in towns.keys() or location.name in towns.keys():
@@ -67,7 +67,7 @@ def make_tweets(train):
                                                  url=train.web_url)
 
             loc = location.name
-            tweets.append((when, what, loc))
+            messages.append((when, what, loc))
 
     # handle special case for origin
     when = train.origin.dep
@@ -75,7 +75,7 @@ def make_tweets(train):
                                      destination=dest,
                                      url=train.web_url)
     loc = train.origin.name
-    tweets.append((when, what, loc))
+    messages.append((when, what, loc))
 
     # handle special case for desination
     when = train.destination.arr
@@ -83,9 +83,9 @@ def make_tweets(train):
                                      destination=dest,
                                      url=train.web_url)
     loc = train.destination.name
-    tweets.append((when, what, loc))
+    messages.append((when, what, loc))
 
-    return tweets
+    return messages
 
 
 def get_trains(routes):
@@ -117,8 +117,8 @@ def make_jobs(trains):
 
     for train in nuclear_trains:
         train.populate()
-        tweets = make_tweets(train)
-        for when, what, loc in tweets:
+        messages = make_messages(train)
+        for when, what, loc in messages:
             # Give the jobs an id so we can refer to them later if needs be
             tweet_job_id = "tweet {}: {}".format(train.uid, loc)
             toot_job_id = "toot {}: {}".format(train.uid, loc)
