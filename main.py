@@ -59,12 +59,12 @@ def make_tweets(train):
         if location.crs in towns.keys() or location.name in towns.keys():
             when = location.arr if location.arr is not None else location.dep
             if location.crs == "LPG":
-                what = tweet_templates[0].format(url=train.url)
+                what = tweet_templates[0].format(url=train.web_url)
             else:
                 what = tweet_templates[1].format(origin=origin,
                                                  destination=dest,
                                                  town=towns[location.crs],
-                                                 url=train.url)
+                                                 url=train.web_url)
 
             loc = location.name
             tweets.append((when, what, loc))
@@ -73,7 +73,7 @@ def make_tweets(train):
     when = train.origin.dep
     what = tweet_templates[2].format(origin=origin,
                                      destination=dest,
-                                     url=train.url)
+                                     url=train.web_url)
     loc = train.origin.name
     tweets.append((when, what, loc))
 
@@ -81,7 +81,7 @@ def make_tweets(train):
     when = train.destination.arr
     what = tweet_templates[3].format(origin=origin,
                                      destination=dest,
-                                     url=train.url)
+                                     url=train.web_url)
     loc = train.destination.name
     tweets.append((when, what, loc))
 

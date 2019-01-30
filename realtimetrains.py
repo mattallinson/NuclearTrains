@@ -28,6 +28,7 @@ def make_api_key():
 
 
 URL_PREFIX = "https://api.rtt.io/api/v1/json"
+WEBSITE_URL = "http://www.realtimetrains.co.uk/train"
 LOCATION_SEARCH = "searchv2"
 TRAIN_SEARCH = "servicev2"
 DATE_FORMAT = "%Y/%m/%d"
@@ -101,6 +102,9 @@ class Train():
         self.webpage_checksum = 0
         self.url = "/".join([URL_PREFIX, TRAIN_SEARCH, self.uid,
                             self.date.strftime(DATE_FORMAT)])
+        self.web_url = "/".join([WEBSITE_URL, self.uid,
+                                self.date.strftime(DATE_FORMAT),
+                                "advanced"])
 
         self.origin = None
         self.destination = None
