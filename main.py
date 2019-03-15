@@ -15,6 +15,7 @@ import realtimetrains as rtt
 logging.basicConfig(filename='nt.log', level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+tweets = {} #Needed for tweet_threader see below
 
 # Configuration
 # !! Never put the API key and secret here !!
@@ -58,6 +59,7 @@ def make_messages(train):
     for location in train.calling_points:
         if location.crs in towns.keys() or location.name in towns.keys():
             when = location.arr if location.arr is not None else location.dep
+            #handles case for LlanfairPG
             if location.crs == "LPG":
                 what = tweet_templates[0].format(url=train.web_url)
             else:
@@ -125,8 +127,8 @@ def make_jobs(trains):
             current_job_ids = [job.id for job in sched.get_jobs()]
 
             if tweet_job_id not in current_job_ids:
-                sched.add_job(twitter_api.update_status, trigger="date",
-                              run_date=when, args=[what], id=tweet_job_id)
+                sched.add_job(tweet_threader, trigger="date",
+                              run_date=when, args=[train, what], id=tweet_job_id)
             else:
                 sched.reschedule_job(tweet_job_id, trigger="date", run_date=when)
 
@@ -136,12 +138,21 @@ def make_jobs(trains):
             else:
                 sched.reschedule_job(toot_job_id, trigger="date", run_date=when)
 
+def tweet_threader(train, tweet_text):
+    # tweets is a dict of a list of tweets per train
+    if train not in tweets:
+        #creates new key in list for that train and add the first tweet
+        tweets[train] =[twitter_api.update_status(tweet_text)]
+    else: #takes the most recent tweet for that train
+        previous_tweet = tweets[train][-1]
+        tweets[train].append(twitter_api.update_status(tweet_text, in_reply_to_status_id=previous_tweet.id)) #tweets and add the newest tweet to the end of the list   
+
 
 twitter_api = make_twitter_api()
 mastodon_api = make_mastodon_api()
 
-
 def main():
+
     current_date = datetime.date.today()
     all_trains = get_trains(routes)
     make_jobs(all_trains)
