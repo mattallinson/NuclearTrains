@@ -138,18 +138,22 @@ def make_jobs(trains):
             else:
                 sched.reschedule_job(toot_job_id, trigger="date", run_date=when)
 
+
 def tweet_threader(train, tweet_text):
     # tweets is a dict of a list of tweets per train
     if train not in tweets:
         #creates new key in list for that train and add the first tweet
-        tweets[train] =[twitter_api.update_status(tweet_text)]
+        tweets[train] = [twitter_api.update_status(tweet_text)]
     else: #takes the most recent tweet for that train
         previous_tweet = tweets[train][-1]
-        tweets[train].append(twitter_api.update_status(tweet_text, in_reply_to_status_id=previous_tweet.id)) #tweets and add the newest tweet to the end of the list   
+        #tweets and add the newest tweet to the end of the list   
+        tweets[train].append(twitter_api.update_status(tweet_text,
+                        in_reply_to_status_id=previous_tweet.id)) 
 
 
 twitter_api = make_twitter_api()
 mastodon_api = make_mastodon_api()
+
 
 def main():
 
