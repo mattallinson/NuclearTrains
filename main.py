@@ -118,6 +118,7 @@ def make_jobs(trains):
             nuclear_trains.append(train)
 
     for train in nuclear_trains:
+        print(train)
         train.populate()
         messages = make_messages(train)
         for when, what, loc in messages:
@@ -141,13 +142,13 @@ def make_jobs(trains):
 
 def tweet_threader(train, tweet_text):
     # tweets is a dict of a list of tweets per train
-    if train not in tweets:
+    if train.uid not in tweets:
         #creates new key in list for that train and add the first tweet
-        tweets[train] = [twitter_api.update_status(tweet_text)]
+        tweets[train.uid] = [twitter_api.update_status(tweet_text)]
     else: #takes the most recent tweet for that train
-        previous_tweet = tweets[train][-1]
+        previous_tweet = tweets[train.uid][-1]
         #tweets and add the newest tweet to the end of the list   
-        tweets[train].append(twitter_api.update_status(tweet_text,
+        tweets[train.uid].append(twitter_api.update_status(tweet_text,
                         in_reply_to_status_id=previous_tweet.id)) 
 
 
