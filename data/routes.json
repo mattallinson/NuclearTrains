@@ -54,5 +54,13 @@
     {
         "from":"TORNESS",
         "to":"KGMRDRS"
+    },
+    {
+        "from":"GRGMACE",
+        "to":"KGMRDRS"
+    },
+    {
+        "from":"GRGMACE",
+        "to":"SELABNF"
     }
 ]
