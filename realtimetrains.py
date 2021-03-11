@@ -1,8 +1,10 @@
-import datetime
+from datetime import datetime, timedelta
 from hashlib import md5
 import json
 import requests
 import sys
+
+from pytz import timezone
 
 
 def make_api_key():
@@ -33,7 +35,7 @@ LOCATION_SEARCH = "searchv2"
 TRAIN_SEARCH = "servicev2"
 DATE_FORMAT = "%Y/%m/%d"
 TIME_FORMAT = "%H%M"
-ONE_DAY = datetime.timedelta(days=1)
+ONE_DAY = timedelta(days=1)
 NO_SCHEDULE = "Couldn't find the schedule..."
 
 rtt_api = make_api_key()
@@ -95,7 +97,7 @@ class Train():
         self.uid = uid
 
         if date is None:
-            self.date = datetime.datetime.today()
+            self.date = datetime.now(tz=timezone("Europe/London"))
         else:
             self.date = date
 
@@ -216,18 +218,18 @@ def _location_datetime(loc_date, loc_timestring):
     """
     # Some values will not translate to a datetime object
     # First four digits are in the simple form of HHMM
-    loc_time = datetime.datetime.strptime(loc_timestring[:4],
-                                          TIME_FORMAT).time()
-    loc_datetime = datetime.datetime.combine(loc_date, loc_time)
+    loc_time = datetime.strptime(loc_timestring[:4],
+                                 TIME_FORMAT).time()
+    loc_datetime = datetime.combine(loc_date, loc_time)
     # Sometimes the time is actually a 6 digit Hrs Mins Secs time
     if len(loc_timestring) == 6:
-        loc_datetime += datetime.timedelta(seconds=int(loc_timestring[4:]))
+        loc_datetime += timedelta(seconds=int(loc_timestring[4:]))
     return loc_datetime
 
 
 def _search_url(station, search_date=None, to_station=None, to_time=None):
     if search_date is None:
-        search_date = datetime.datetime.today()
+        search_date = datetime.now(tz=timezone("Europe/London"))
     url_date = search_date.strftime(DATE_FORMAT)
 
     if to_station is not None:
@@ -245,7 +247,7 @@ def _search_url(station, search_date=None, to_station=None, to_time=None):
 def search(station, search_date=None, to_station=None, time=None):
     trains = []
     if search_date is None:
-        search_date = datetime.datetime.today()
+        search_date = datetime.today()
 
     url = _search_url(station, to_station=to_station, search_date=search_date, to_time=time)
     request = requests.get(url, auth=rtt_api)

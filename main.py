@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
-import datetime
+from datetime import datetime
 import json
 import logging
 import sys
 from time import sleep
 
-import tweepy
-from mastodon import Mastodon
 from apscheduler.schedulers.background import BackgroundScheduler
+from mastodon import Mastodon
+from pytz import timezone
+import tweepy
 
 import realtimetrains as rtt
 
@@ -158,7 +159,7 @@ mastodon_api = make_mastodon_api()
 
 def main():
 
-    current_date = datetime.date.today()
+    current_date = datetime.now(tz=timezone("Europe/London"))
     all_trains = get_trains(routes)
     make_jobs(all_trains)
     sched.add_job(make_jobs, "cron", args=[all_trains],
