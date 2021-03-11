@@ -13,9 +13,10 @@ import tweepy
 
 import realtimetrains as rtt
 
-logging.basicConfig(filename='nt.log', level=logging.INFO)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    filename='nt.log', level=logging.INFO
+)
 tweets = {} #Needed for tweet_threader see below
 
 # Configuration
@@ -103,11 +104,11 @@ def get_trains(routes):
                 try:
                     train.populate()
                 except RuntimeError:
-                    logger.warning("No schedule for {}".format(train))
+                    logging.warning("No schedule for {}".format(train))
                 else:
                     all_trains.append(train)
         else:
-            logger.info(
+            logging.info(
                 "No trains from {} to {}".format(route["from"], route["to"]))
     return all_trains
 
@@ -169,12 +170,12 @@ def main():
     while sched.get_jobs():
         try:
             for job in sched.get_jobs():
-                logger.info("{}, {}".format(job.id, job.trigger))
+                logging.debug("{}, {}".format(job.id, job.trigger))
             sleep(300)
         except (SystemExit, KeyboardInterrupt):
             raise
         except Exception as e:
-            logger.exception("{!r}".format(e))
+            logging.exception("{!r}".format(e))
 
 
 if __name__ == '__main__':
