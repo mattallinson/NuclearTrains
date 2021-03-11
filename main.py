@@ -58,15 +58,16 @@ def make_messages(train):
     messages = []
 
     for location in train.calling_points:
-        if location.crs in towns.keys() or location.name in towns.keys():
+        if location.crs in towns or location.name in towns:
             when = location.arr if location.arr is not None else location.dep
             #handles case for LlanfairPG
             if location.crs == "LPG":
                 what = tweet_templates[0].format(url=train.web_url)
             else:
+                town = towns.get(location.crs) or towns.get(location.name)
                 what = tweet_templates[1].format(origin=origin,
                                                  destination=dest,
-                                                 town=towns[location.crs],
+                                                 town=town,
                                                  url=train.web_url)
 
             loc = location.name
