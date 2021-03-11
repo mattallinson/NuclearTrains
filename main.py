@@ -36,6 +36,8 @@ with open(TWEET_FILE, "r") as tweet_file:
 with open(AUTH_FILE, "r") as auth_file:
         auth_data = json.load(auth_file)
 
+london_time = timezone("Europe/London")
+
 sched = BackgroundScheduler()
 sched.start()
 
@@ -61,6 +63,7 @@ def make_messages(train):
     for location in train.calling_points:
         if location.crs in towns or location.name in towns:
             when = location.arr if location.arr is not None else location.dep
+            when = london_time.localize(when)
             #handles case for LlanfairPG
             if location.crs == "LPG":
                 what = tweet_templates[0].format(url=train.web_url)
@@ -161,7 +164,7 @@ mastodon_api = make_mastodon_api()
 
 def main():
 
-    current_date = datetime.now(tz=timezone("Europe/London"))
+    current_date = datetime.now(tz=london_time)
     all_trains = get_trains(routes)
     make_jobs(all_trains)
     sched.add_job(make_jobs, "cron", args=[all_trains],
