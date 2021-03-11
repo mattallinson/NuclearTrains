@@ -78,7 +78,7 @@ def make_messages(train):
             messages.append((when, what, loc))
 
     # handle special case for origin
-    when = train.origin.dep
+    when = london_time.localize(train.origin.dep)
     what = tweet_templates[2].format(origin=origin,
                                      destination=dest,
                                      url=train.web_url)
@@ -86,7 +86,7 @@ def make_messages(train):
     messages.append((when, what, loc))
 
     # handle special case for desination
-    when = train.destination.arr
+    when = london_time.localize(train.destination.arr)
     what = tweet_templates[3].format(origin=origin,
                                      destination=dest,
                                      url=train.web_url)
